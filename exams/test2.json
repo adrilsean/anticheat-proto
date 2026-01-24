@@ -1,0 +1,33 @@
+{
+    "exam_name": "test2",
+    "questions": [
+        {
+            "question": "q",
+            "type": "mcq",
+            "choices": [
+                "a",
+                "b",
+                "c",
+                "d"
+            ],
+            "answer": 2
+        },
+        {
+            "question": "text",
+            "type": "text",
+            "answer_text": "text"
+        },
+        {
+            "question": "tf",
+            "type": "tf",
+            "answer": 1
+        }
+    ],
+    "settings": {
+        "duration_enabled": true,
+        "duration": 60,
+        "shuffle": true,
+        "show_detections": true,
+        "show_score": false
+    }
+}

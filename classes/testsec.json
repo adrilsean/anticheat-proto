@@ -1,0 +1,76 @@
+{
+    "classname": "testsec",
+    "students": [
+        {
+            "name": "adril",
+            "password": "12345"
+        },
+        {
+            "name": "sean",
+            "password": "23456"
+        },
+        {
+            "name": "bartolome",
+            "password": "34567"
+        },
+        {
+            "name": "francine",
+            "password": "45678"
+        },
+        {
+            "name": "albon",
+            "password": "56789"
+        },
+        {
+            "name": "marie",
+            "password": "67900"
+        },
+        {
+            "name": "kathleen",
+            "password": "79011"
+        },
+        {
+            "name": "ise",
+            "password": "90122"
+        },
+        {
+            "name": "dalumpines",
+            "password": "101233"
+        },
+        {
+            "name": "mark",
+            "password": "112344"
+        },
+        {
+            "name": "gian",
+            "password": "123455"
+        },
+        {
+            "name": "panopio",
+            "password": "134566"
+        },
+        {
+            "name": "jhona",
+            "password": "145677"
+        },
+        {
+            "name": "mae",
+            "password": "156788"
+        },
+        {
+            "name": "corpuz",
+            "password": "167899"
+        },
+        {
+            "name": "jenny",
+            "password": "179010"
+        },
+        {
+            "name": "mangayan",
+            "password": "190121"
+        }
+    ],
+    "exams": [
+        "test2"
+    ]
+}
