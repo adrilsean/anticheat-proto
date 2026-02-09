@@ -1,0 +1,70 @@
+{
+    "exam_name": "timedshuff",
+    "student_name": "apan",
+    "class_name": "tete",
+    "answers": [
+        3,
+        "tangina",
+        2
+    ],
+    "wrong_questions": [
+        2,
+        3
+    ],
+    "score": 1,
+    "detections": [
+        {
+            "timestamp_earth": "2026-02-09 15:20:33",
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:20:33",
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:20:34",
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:20:34",
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:20:34",
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:20:34",
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:20:37",
+            "timestamp_relative_sec": 13,
+            "event": "Window focus lost (Tab Switched)"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:20:39",
+            "timestamp_relative_sec": 16,
+            "event": "Window focus lost (Tab Switched)"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:20:42",
+            "timestamp_relative_sec": 18,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:20:42",
+            "timestamp_relative_sec": 18,
+            "event": "Copy action detected"
+        }
+    ],
+    "started_at": "2026-02-09 15:20:23",
+    "finished_at": "2026-02-09 15:20:43",
+    "duration_taken_sec": 19.811956
+}

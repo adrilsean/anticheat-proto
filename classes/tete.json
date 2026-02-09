@@ -1,0 +1,45 @@
+{
+    "classname": "tete",
+    "students": [
+        {
+            "name": "adril",
+            "password": "123"
+        },
+        {
+            "name": "bartolome",
+            "password": "123"
+        },
+        {
+            "name": "sean",
+            "password": "23"
+        },
+        {
+            "name": "gavin",
+            "password": "123"
+        },
+        {
+            "name": "ken",
+            "password": "123"
+        },
+        {
+            "name": "mark",
+            "password": "2321"
+        },
+        {
+            "name": "gian",
+            "password": "123"
+        },
+        {
+            "name": "apan",
+            "password": "321"
+        },
+        {
+            "name": "bart",
+            "password": "123"
+        }
+    ],
+    "exams": [
+        "tafda",
+        "timedshuff"
+    ]
+}

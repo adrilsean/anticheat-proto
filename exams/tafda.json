@@ -1,0 +1,47 @@
+{
+    "exam_name": "tafda",
+    "questions": [
+        {
+            "question": "",
+            "type": "text",
+            "answer_text": "fdadf"
+        },
+        {
+            "question": "",
+            "type": "text",
+            "answer_text": "fdadf"
+        },
+        {
+            "question": "",
+            "type": "text",
+            "answer_text": "fdadf"
+        },
+        {
+            "question": "",
+            "type": "text",
+            "answer_text": "fdadf"
+        },
+        {
+            "question": "fdafda",
+            "type": "text",
+            "answer_text": "fdadf"
+        },
+        {
+            "question": "",
+            "type": "text",
+            "answer_text": "fdadf"
+        },
+        {
+            "question": "",
+            "type": "text",
+            "answer_text": "fdadf"
+        }
+    ],
+    "settings": {
+        "shuffle": true,
+        "duration": null,
+        "duration_enabled": false,
+        "show_detections": true,
+        "show_score": true
+    }
+}

@@ -1,0 +1,39 @@
+{
+    "exam_name": "timedshuff",
+    "questions": [
+        {
+            "question": "qwe",
+            "type": "mcq",
+            "options": [
+                "fdafad",
+                "ewqeq",
+                "fdafdas",
+                "ewq"
+            ],
+            "answer_index": 3
+        },
+        {
+            "question": "sec",
+            "type": "mcq",
+            "options": [
+                "123",
+                "12",
+                "123121",
+                "ewqw"
+            ],
+            "answer_index": 3
+        },
+        {
+            "question": "text",
+            "type": "text",
+            "answer_text": "here answer"
+        }
+    ],
+    "settings": {
+        "shuffle": true,
+        "duration": 60,
+        "duration_enabled": true,
+        "show_detections": true,
+        "show_score": true
+    }
+}

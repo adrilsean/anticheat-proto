@@ -1,0 +1,36 @@
+{
+    "exam_name": "timedshuff",
+    "student_name": "bartolome",
+    "class_name": "tete",
+    "answers": [
+        0,
+        "fdafdafdafdafdafda",
+        2
+    ],
+    "wrong_questions": [
+        1,
+        2,
+        3
+    ],
+    "score": 0,
+    "detections": [
+        {
+            "timestamp_earth": "2026-02-09 14:53:23",
+            "timestamp_relative_sec": 2,
+            "event": "Window focus lost (Tab Switched)"
+        },
+        {
+            "timestamp_earth": "2026-02-09 14:53:31",
+            "timestamp_relative_sec": 10,
+            "event": "Window focus lost (Tab Switched)"
+        },
+        {
+            "timestamp_earth": "2026-02-09 14:53:32",
+            "timestamp_relative_sec": 11,
+            "event": "Window focus lost (Tab Switched)"
+        }
+    ],
+    "started_at": "2026-02-09 14:53:21",
+    "finished_at": "2026-02-09 14:53:37",
+    "duration_taken_sec": 16.033446
+}

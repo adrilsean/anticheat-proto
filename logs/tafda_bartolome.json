@@ -1,0 +1,94 @@
+{
+    "exam_name": "tafda",
+    "student_name": "bartolome",
+    "class_name": "tete",
+    "answers": [
+        "fdafda",
+        "fdafdafdafdafdafda",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    "wrong_questions": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+    ],
+    "score": 0,
+    "detections": [
+        {
+            "timestamp_earth": "2026-02-09 15:05:31",
+            "timestamp_relative_sec": 2,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:05:31",
+            "timestamp_relative_sec": 2,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:05:31",
+            "timestamp_relative_sec": 3,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:05:31",
+            "timestamp_relative_sec": 3,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:05:31",
+            "timestamp_relative_sec": 3,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:05:31",
+            "timestamp_relative_sec": 3,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:05:34",
+            "timestamp_relative_sec": 5,
+            "event": "Window focus lost (Tab Switched)"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:05:36",
+            "timestamp_relative_sec": 7,
+            "event": "Paste action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:05:36",
+            "timestamp_relative_sec": 7,
+            "event": "Paste action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:05:36",
+            "timestamp_relative_sec": 8,
+            "event": "Paste action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:05:36",
+            "timestamp_relative_sec": 8,
+            "event": "Paste action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:05:36",
+            "timestamp_relative_sec": 8,
+            "event": "Paste action detected"
+        },
+        {
+            "timestamp_earth": "2026-02-09 15:05:36",
+            "timestamp_relative_sec": 8,
+            "event": "Paste action detected"
+        }
+    ],
+    "started_at": "2026-02-09 15:05:28",
+    "finished_at": "2026-02-09 15:05:37",
+    "duration_taken_sec": 9.571457
+}

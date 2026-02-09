@@ -1,0 +1,23 @@
+{
+    "exam_name": "bart",
+    "questions": [
+        {
+            "question": "adril",
+            "type": "mcq",
+            "options": [
+                "kabote",
+                "tanga",
+                "mushroom",
+                "titei"
+            ],
+            "answer_index": 2
+        }
+    ],
+    "settings": {
+        "shuffle": true,
+        "duration": null,
+        "duration_enabled": false,
+        "show_detections": true,
+        "show_score": true
+    }
+}

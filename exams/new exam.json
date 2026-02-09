@@ -1,0 +1,33 @@
+{
+    "exam_name": "new exam",
+    "questions": [
+        {
+            "question": "question1",
+            "type": "mcq",
+            "choices": [
+                "adsf",
+                "fdaffda",
+                "fdasf",
+                "fdafd"
+            ],
+            "answer": 3
+        },
+        {
+            "question": "q2",
+            "type": "text",
+            "answer_text": "tabg"
+        },
+        {
+            "question": "totooo ba",
+            "type": "tf",
+            "answer": 0
+        }
+    ],
+    "settings": {
+        "duration_enabled": false,
+        "duration": null,
+        "shuffle": false,
+        "show_detections": true,
+        "show_score": true
+    }
+}

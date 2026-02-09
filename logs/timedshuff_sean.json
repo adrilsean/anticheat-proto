@@ -1,0 +1,31 @@
+{
+    "exam_name": "timedshuff",
+    "student_name": "sean",
+    "class_name": "tete",
+    "answers": [
+        0,
+        0,
+        "tangntangn"
+    ],
+    "wrong_questions": [
+        1,
+        2,
+        3
+    ],
+    "score": 0,
+    "detections": [
+        {
+            "timestamp_earth": "2026-02-09 14:50:32",
+            "timestamp_relative_sec": 9,
+            "event": "Window focus lost (Tab Switched)"
+        },
+        {
+            "timestamp_earth": "2026-02-09 14:50:35",
+            "timestamp_relative_sec": 12,
+            "event": "Window focus lost (Tab Switched)"
+        }
+    ],
+    "started_at": "2026-02-09 14:50:23",
+    "finished_at": "2026-02-09 14:50:37",
+    "duration_taken_sec": 13.682062
+}

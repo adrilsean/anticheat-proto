@@ -1,0 +1,28 @@
+{
+    "exam_name": "tafda",
+    "student_name": "adril",
+    "class_name": "tete",
+    "answers": [
+        "gago",
+        "ka b",
+        "dfsafjdslka",
+        "",
+        "",
+        "",
+        ""
+    ],
+    "wrong_questions": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+    ],
+    "score": 0,
+    "detections": [],
+    "started_at": "2026-02-09 14:33:03",
+    "finished_at": "2026-02-09 14:33:10",
+    "duration_taken_sec": 7.612747
+}
