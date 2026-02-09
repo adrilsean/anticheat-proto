@@ -30,11 +30,11 @@ def teacher_app():
     tk.Button(landing_frame, text="View Exam Logs", width=20,
               command=lambda: [landing_frame.pack_forget(), logs_frame.pack(fill="both", expand=True), init_logs_frame()]).pack(pady=5)
     tk.Button(landing_frame, text="Create New Class", width=25,
-          command=lambda:[landing_frame.pack_forget(), create_class_frame.pack(fill="both", expand=True), init_create_class_frame()]).pack(pady=5)
+         command=lambda:[landing_frame.pack_forget(), create_class_frame.pack(fill="both", expand=True), init_create_class_frame()]).pack(pady=5)
     tk.Button(landing_frame, text="Manage Classes", width=25,
-          command=lambda: [landing_frame.pack_forget(), manage_class_frame.pack(fill="both", expand=True), init_manage_class_frame()]).pack(pady=5)
-   
-   
+         command=lambda: [landing_frame.pack_forget(), manage_class_frame.pack(fill="both", expand=True), init_manage_class_frame()]).pack(pady=5)
+    
+    
     # ===================== MANAGE CLASS FRAME =====================
     def init_manage_class_frame():
         os.makedirs("classes", exist_ok=True)
@@ -96,7 +96,7 @@ def teacher_app():
             for s in current_class_data.get("students", []):
                 student_listbox.insert(tk.END, s["name"])
 
-           # Populate exam list
+            # Populate exam list
             exam_listbox.delete(0, tk.END)
             for e in current_class_data.get("exams", []):
                 exam_name = e[:-5] if e.endswith(".json") else e
@@ -167,7 +167,7 @@ def teacher_app():
             tk.Button(button_frame, text="Process", font=("Arial", 12, "bold"), width=15, command=process_import).pack()
 
 
-       # --- Button: Assign Exam ---
+        # --- Button: Assign Exam ---
         def assign_exam():
             if not class_var.get():
                 messagebox.showerror("Error", "Select a class first.")
@@ -188,7 +188,7 @@ def teacher_app():
             exam_listbox_popup = tk.Listbox(popup)
             exam_listbox_popup.pack(fill="both", expand=True, padx=10, pady=10)
 
-           # Populate Listbox with exams
+            # Populate Listbox with exams
             for exam in exams_files:
                 exam_name = exam[:-5] if exam.endswith(".json") else exam  # remove .json
                 exam_listbox_popup.insert(tk.END, exam_name)
@@ -512,7 +512,7 @@ def teacher_app():
 
         update_answer_fields()
 
-       # Right frame: Question list + Settings
+        # Right frame: Question list + Settings
         right = tk.Frame(main)
         right.pack(side="right", fill="y")
 

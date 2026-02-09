@@ -26,7 +26,6 @@ def student_app():
     remaining_seconds = 0
     exam_start_time = None
 
-
     # ===================== DETECTION LOG =====================
     detection_frame = tk.Frame(root, bd=1, relief="sunken")
     detection_frame.pack(side="bottom", fill="x")
@@ -104,7 +103,7 @@ def student_app():
             for w in f.winfo_children():
                 w.destroy()
 
-# ------------------- STUDENT LOGIN -------------------
+    # ------------------- STUDENT LOGIN -------------------
     clear_frames()
     login_frame.pack(fill="both", expand=True)
 
@@ -207,7 +206,6 @@ def student_app():
 
     tk.Button(login_frame, text="Login", width=20, command=submit_login).pack(pady=20)
 
-
     # ===================== LOAD EXAM =====================
     def load_exam(exam_name):
         nonlocal current_exam, answer_vars, detection_events, exam_settings
@@ -288,7 +286,6 @@ def student_app():
 
         if enable_duration and duration > 0:
             countdown()
-
 
         # --- Exam Questions ---
         canvas = tk.Canvas(exam_frame)
@@ -402,7 +399,5 @@ def student_app():
             width=20,
             command=lambda: show_exam_dashboard(student_name, student_classes)
         ).pack()
-
-
 
     root.mainloop()
