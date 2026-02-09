@@ -11,7 +11,53 @@ from PyQt6.QtGui import QPixmap, QColor, QFont
 NU_BLUE = "#0B2C5D"
 NU_HOVER = "#154c9e"
 
-# ... [AnimatedBubbleButton class remains the same as your snippet] ...
+import socket
+import network_logic
+from PyQt6.QtCore import QThread
+class RequestHandler(QThread):
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+
+    def run(self):
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind(('0.0.0.0', network_logic.TCP_PORT))
+        server.listen(5)
+        while True:
+            conn, addr = server.accept()
+            try:
+                data = conn.recv(1024 * 50).decode('utf-8')
+                req = json.loads(data)
+                resp = {"status": "error"}
+
+                if req["type"] == "LOGIN":
+                    # Global search through all rosters
+                    for filename in os.listdir("classes"):
+                        if filename.endswith(".json"):
+                            with open(f"classes/{filename}", "r", encoding="utf-8") as f:
+                                data = json.load(f)
+                                if any(s['name'] == req['name'] and s['password'] == req['password'] for s in data['students']):
+                                    resp = {"status": "success", "classname": data["classname"]}
+                                    break
+                        if resp.get("status") == "success": break
+
+                elif req["type"] == "GET_EXAM_LIST":
+                    path = f"classes/{req['classname']}.json"
+                    if os.path.exists(path):
+                        with open(path, "r", encoding="utf-8") as f:
+                            resp = {"status": "success", "exams": json.load(f).get("exams", [])}
+
+                elif req["type"] == "GET_EXAM":
+                    path = f"exams/{req['exam_name']}.json"
+                    if os.path.exists(path):
+                        with open(path, "r", encoding="utf-8") as f:
+                            resp = {"status": "success", "data": json.load(f)}
+
+                conn.send(json.dumps(resp).encode('utf-8'))
+            except: pass
+            finally: conn.close()
+            
 class AnimatedBubbleButton(QPushButton):
     def __init__(self, text, parent=None, color=NU_BLUE, radius=25, text_col="white"):
         super().__init__(text, parent)

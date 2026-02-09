@@ -4,38 +4,49 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtCore import Qt, QTimer, QEvent
 from PyQt6.QtGui import QFont
 
+# Import the shared networking module
+import network_logic
+
 class StudentWindow(QMainWindow):
-    def __init__(self, name, password, portal):
+    def __init__(self, name, teacher_ip, portal, classname):
         super().__init__()
-        # 1. State Variables
+        # 1. ASSIGN VARIABLES FIRST
         self.portal = portal
+        self.teacher_ip = teacher_ip
         self.student_name = name
-        self.student_class = "Unknown"
-        self.student_classes_data = [] 
+        self.student_class = classname
         
+        # State Variables
         self.exam_active = False
         self.current_exam_data = {}
         self.answer_widgets = []
         self.detections = []
         self.start_time = None
         self.timer_id = QTimer()
-        self.remaining_seconds = 0
 
         # 2. UI Setup
         self.setWindowTitle("Proctora Student Portal")
         self.setFixedSize(900, 600)
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
-
-        # Build shared Detection Log
         self.init_detection_log_ui()
         
-        # 3. Logic Initialization
-        self.perform_login_logic(name, password)
-
-        # 4. CRITICAL FIX: Install Global Event Filter
-        # This allows the window to catch keystrokes even if a QLineEdit is focused.
+        # 3. Enter Dashboard
+        self.init_dashboard_view()
         QApplication.instance().installEventFilter(self)
+
+    def refresh_exam_list(self):
+        """Fetch exam list from the teacher via network"""
+        self.exam_table.setRowCount(0)
+        resp = network_logic.network_request(self.teacher_ip, {
+            "type": "GET_EXAM_LIST", "classname": self.student_class
+        })
+        if resp.get("status") == "success":
+            for ex_name in resp.get("exams", []):
+                row = self.exam_table.rowCount()
+                self.exam_table.insertRow(row)
+                self.exam_table.setItem(row, 0, QTableWidgetItem(ex_name))
+                self.exam_table.setItem(row, 1, QTableWidgetItem("AVAILABLE"))
 
     def init_detection_log_ui(self):
         """Creates the bottom detection log used during exams"""
@@ -50,7 +61,6 @@ class StudentWindow(QMainWindow):
         self.detection_display = QTextEdit()
         self.detection_display.setReadOnly(True)
         self.detection_display.setFont(QFont("Courier", 9))
-        
         self.detection_display.setStyleSheet("""
             QTextEdit {
                 background-color: #f0f0f0; 
@@ -59,39 +69,8 @@ class StudentWindow(QMainWindow):
                 padding: 5px;
             }
         """)
-        
         layout.addWidget(self.detection_display)
         self.log_dock.hide()
-
-    def perform_login_logic(self, name, password):
-        if not os.path.exists("classes"): os.makedirs("classes")
-        
-        found = False
-        for f in os.listdir("classes"):
-            if f.endswith(".json"):
-                with open(f"classes/{f}", "r", encoding="utf-8") as file:
-                    data = json.load(file)
-                    for s in data.get("students", []):
-                        if s["name"] == name and s["password"] == password:
-                            self.student_classes_data.append((data["classname"], data.get("exams", [])))
-                            found = True
-        
-        if found:
-            self.init_dashboard_view()
-        else:
-            QMessageBox.warning(self, "Login Error", "No student record found or invalid password.")
-            QTimer.singleShot(0, self.close)
-
-    def get_taken_exams(self):
-        taken = set()
-        if os.path.exists("logs"):
-            for f in os.listdir("logs"):
-                if f.endswith(".json"):
-                    with open(f"logs/{f}", "r", encoding="utf-8") as file:
-                        log = json.load(file)
-                        if log.get("student_name") == self.student_name:
-                            taken.add(log.get("exam_name"))
-        return taken
 
     # ===================== VIEWS =====================
 
@@ -102,12 +81,9 @@ class StudentWindow(QMainWindow):
         header.setStyleSheet("font-size: 22px; font-weight: bold; color: #0B2C5D;")
         lay.addWidget(header)
 
-        lay.addWidget(QLabel("Select Class:"))
-        self.class_combo = QComboBox()
-        for cname, _ in self.student_classes_data:
-            self.class_combo.addItem(cname)
-        self.class_combo.currentIndexChanged.connect(self.refresh_exam_list)
-        lay.addWidget(self.class_combo)
+        # Display the class assigned by the teacher
+        class_info = QLabel(f"Current Class: <b>{self.student_class}</b>")
+        lay.addWidget(class_info)
 
         lay.addWidget(QLabel("Assigned Exams (Double-click to start):"))
         self.exam_table = QTableWidget(0, 2)
@@ -125,38 +101,19 @@ class StudentWindow(QMainWindow):
         self.refresh_exam_list()
         self.stack.addWidget(page)
         self.stack.setCurrentWidget(page)
-
-    def refresh_exam_list(self):
-        self.exam_table.setRowCount(0)
-        taken_exams = self.get_taken_exams()
         
-        selected_class = self.class_combo.currentText()
-        exams = []
-        for cname, ex_list in self.student_classes_data:
-            if cname == selected_class:
-                exams = ex_list
-                self.student_class = cname
-                break
-
-        for ex in exams:
-            ex_name = ex[:-5] if ex.endswith(".json") else ex
-            row = self.exam_table.rowCount()
-            self.exam_table.insertRow(row)
-            
-            name_item = QTableWidgetItem(ex_name)
-            name_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            
-            status_text = "COMPLETED" if ex_name in taken_exams else "AVAILABLE"
-            status_item = QTableWidgetItem(status_text)
-            status_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-
-            if status_text == "COMPLETED":
-                status_item.setForeground(Qt.GlobalColor.red)
-            else:
-                status_item.setForeground(Qt.GlobalColor.darkGreen)
-
-            self.exam_table.setItem(row, 0, name_item)
-            self.exam_table.setItem(row, 1, status_item)
+    def refresh_exam_list(self):
+        """Fetch exam list from the teacher via network"""
+        self.exam_table.setRowCount(0)
+        resp = network_logic.network_request(self.teacher_ip, {
+            "type": "GET_EXAM_LIST", "classname": self.student_class
+        })
+        if resp.get("status") == "success":
+            for ex_name in resp.get("exams", []):
+                row = self.exam_table.rowCount()
+                self.exam_table.insertRow(row)
+                self.exam_table.setItem(row, 0, QTableWidgetItem(ex_name))
+                self.exam_table.setItem(row, 1, QTableWidgetItem("AVAILABLE"))
 
     # ===================== EXAM LOGIC =====================
 
@@ -165,23 +122,22 @@ class StudentWindow(QMainWindow):
         if row == -1: return
         
         ex_name = self.exam_table.item(row, 0).text()
-        status = self.exam_table.item(row, 1).text()
 
-        if status == "COMPLETED":
-            QMessageBox.information(self, "Already Taken", "You have already submitted this exam.")
-            return
-
-        path = f"exams/{ex_name}.json"
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                self.current_exam_data = json.load(f)
+        # Download the specific exam JSON from the teacher
+        resp = network_logic.network_request(self.teacher_ip, {
+            "type": "GET_EXAM", 
+            "exam_name": ex_name
+        })
+        
+        if resp.get("status") == "success":
+            self.current_exam_data = resp["data"]
             
             if self.current_exam_data.get("settings", {}).get("shuffle"):
                 random.shuffle(self.current_exam_data["questions"])
             
             self.setup_welcome_screen(ex_name)
         else:
-            QMessageBox.critical(self, "Error", "Exam file not found.")
+            QMessageBox.critical(self, "Error", "Failed to download exam from teacher.")
 
     def setup_welcome_screen(self, name):
         page = QWidget(); lay = QVBoxLayout(page)
@@ -242,7 +198,7 @@ class StudentWindow(QMainWindow):
             if q["type"] == "mcq":
                 grp = QButtonGroup(box)
                 self.answer_widgets.append(grp)
-                options = q.get("options") or q.get("choices") or []
+                options = q.get("options") or []
                 for idx, txt in enumerate(options):
                     rb = QRadioButton(txt)
                     grp.addButton(rb, idx)
@@ -288,7 +244,6 @@ class StudentWindow(QMainWindow):
         self.timer_id.stop()
         
         score = 0
-        wrong_indices = []
         user_answers = []
 
         for i, q in enumerate(self.current_exam_data["questions"]):
@@ -298,7 +253,7 @@ class StudentWindow(QMainWindow):
 
             if q["type"] in ("mcq", "tf"):
                 val = ans_widget.checkedId()
-                correct_val = q.get("answer") if q.get("answer") is not None else q.get("answer_index")
+                correct_val = q.get("answer_index") if q["type"] == "mcq" else (1 if q.get("correct_tf") else 0)
                 if val == correct_val: is_correct = True
             
             elif q["type"] == "text":
@@ -307,32 +262,27 @@ class StudentWindow(QMainWindow):
             
             user_answers.append(val)
             if is_correct: score += 1
-            else: wrong_indices.append(i + 1)
 
         finish_time = datetime.now()
         duration = (finish_time - self.start_time).total_seconds() if self.start_time else 0
         
+        # Prepare the packet to send to the Teacher
         log_packet = {
+            "type": "SUBMIT_LOG",
             "exam_name": self.current_exam_data.get("exam_name"),
             "student_name": self.student_name,
-            "class_name": self.student_class,
-            "answers": user_answers,
-            "wrong_questions": wrong_indices,
+            "classname": self.student_class,
             "score": score,
             "detections": self.detections,
-            "started_at": self.start_time.strftime("%Y-%m-%d %H:%M:%S") if self.start_time else "",
-            "finished_at": finish_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "duration_taken_sec": duration
+            "duration_taken_sec": duration,
+            "finished_at": finish_time.strftime("%Y-%m-%d %H:%M:%S")
         }
 
-        os.makedirs("logs", exist_ok=True)
-        filename = f"{self.current_exam_data.get('exam_name')}_{self.student_name}.json"
-        with open(f"logs/{filename}", "w", encoding="utf-8") as f:
-            json.dump(log_packet, f, indent=4)
+        # Send the results back to the Teacher's computer
+        resp = network_logic.network_request(self.teacher_ip, log_packet)
 
-        show_score = self.current_exam_data.get("settings", {}).get("show_score", True)
         msg = "Exam Submitted Successfully!"
-        if show_score:
+        if self.current_exam_data.get("settings", {}).get("show_score", True):
             msg += f"\nScore: {score} / {len(self.current_exam_data['questions'])}"
         
         QMessageBox.information(self, "Finished", msg)
@@ -344,7 +294,6 @@ class StudentWindow(QMainWindow):
         now = datetime.now()
         rel = int((now - self.start_time).total_seconds()) if self.start_time else 0
         event_data = {
-            "timestamp_earth": now.strftime("%Y-%m-%d %H:%M:%S"),
             "timestamp_relative_sec": rel,
             "event": msg
         }
@@ -352,28 +301,14 @@ class StudentWindow(QMainWindow):
         self.detection_display.append(f"[{rel}s] {msg}")
 
     def eventFilter(self, obj, event):
-        # 1. Check if an exam is actually running
         if self.exam_active and event.type() == QEvent.Type.KeyPress:
-            
-            # 2. Check for the Control Key
-            # We use bitwise '&' to detect Ctrl even if other keys (like CapsLock) are on
             if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-                
                 key = event.key()
-                # 3. Detect C (Copy) or V (Paste)
                 if key == Qt.Key.Key_C or key == Qt.Key.Key_V:
-                    
-                    # We only log if the object is a 'Window' or 'Input' type 
-                    # to prevent the "double logging" you saw earlier.
                     if obj.isWidgetType():
                         action = "Copy" if key == Qt.Key.Key_C else "Paste"
                         self.log_cheat_event(f"{action} action detected")
-                        
-                        # Return False so the actual Copy/Paste still works 
-                        # (Change to True if you want to BLOCK the cheating)
                         return False 
-        
-        # Pass all other events back to the system
         return super().eventFilter(obj, event)
 
     def changeEvent(self, event):

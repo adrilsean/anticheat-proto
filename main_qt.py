@@ -5,6 +5,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QPalette, QColor
 
 # Import the other windows
+import network_logic
 import teacher_qt as teacher
 import student_qt as student
 from teacher_qt import AnimatedBubbleButton, NU_BLUE
@@ -25,6 +26,12 @@ class AntiCheatPortal(QMainWindow):
         self.bg_label = QLabel(self)
         self.bg_label.setGeometry(0, 0, 900, 600)
         self.show_opening_page()
+        
+        self.active_teacher_ip = None 
+        self.server_started = False  
+        self.listener = network_logic.DiscoveryListener()
+        self.listener.teacher_found.connect(self.on_teacher_discovered)
+        self.listener.start()
 
     def set_bg(self, img_path):
         """1.3 SET BACKGROUND - Load and scale background image"""
@@ -38,6 +45,12 @@ class AntiCheatPortal(QMainWindow):
         for child in self.findChildren(QWidget):
             if child != self.bg_label: 
                 child.deleteLater()
+
+    def on_teacher_discovered(self, info):
+        self.active_teacher_ip = info["ip"]
+        if hasattr(self, 'status_label'):
+            self.status_label.setText(f"Connected: {len(info['available_classes'])} Classes Active")
+            self.status_label.setStyleSheet("color: #28a745; font-weight: bold;")
 
     def show_opening_page(self):
         """2. OPENING PAGE - Display main entry screen with Teacher/Student buttons"""
@@ -57,11 +70,21 @@ class AntiCheatPortal(QMainWindow):
         self.btn_s.show()
 
     def show_teacher_page(self):
-        """3. TEACHER PAGE - Display teacher menu with exam and class options"""
+        """3. TEACHER PAGE - Hook networking and display menu"""
         self.set_bg("69.png")
         self.clear_ui()
 
-        # 3.1 MENU OPTIONS - Define all teacher menu buttons
+        if not self.server_started:
+            # Start the Lighthouse (UDP) and the Server (TCP)
+            classes = [f[:-5] for f in os.listdir("classes") if f.endswith(".json")]
+            self.broadcaster = network_logic.TeacherBroadcaster(classes)
+            self.broadcaster.start()
+
+            self.server_thread = teacher.RequestHandler(self)
+            self.server_thread.start()
+            self.server_started = True
+
+        # 3.1 MENU OPTIONS (Existing code continues)
         options = [
             ("GENERATE EXAM", 251, "exam"),
             ("VIEW EXAM LOGS", 325, "logs"),
@@ -69,14 +92,12 @@ class AntiCheatPortal(QMainWindow):
             ("MANAGE CLASSES", 484, "manage_class")
         ]
 
-        # 3.2 CREATE BUTTONS - Generate menu buttons for each option
         for text, y, key in options:
             btn = AnimatedBubbleButton(text.upper(), self, radius=20)
             btn.setGeometry(295, y, 288, 44)
             btn.clicked.connect(lambda ch, k=key: self.launch_teacher(k))
             btn.show()
 
-        # 3.3 BACK BUTTON - Return to opening page
         back = AnimatedBubbleButton("BACK", self, color="#E7F0FE", radius=15, text_col=NU_BLUE)
         back.setGeometry(89, 250, 126, 36)
         back.clicked.connect(self.show_opening_page)
@@ -131,14 +152,25 @@ class AntiCheatPortal(QMainWindow):
         self.t_win.show()
 
     def launch_student(self):
-        """6. LAUNCH STUDENT - Validate credentials and open student exam window"""
+        """CRITICAL FIX: Use network login and pass classname"""
+        if not self.active_teacher_ip:
+            QMessageBox.warning(self, "Offline", "Waiting for teacher...")
+            return
+
         n, p = self.name_entry.text().strip(), self.pass_entry.text().strip()
-        if n and p:
+        
+        # Perform Network Login
+        resp = network_logic.network_request(self.active_teacher_ip, {
+            "type": "LOGIN", "name": n, "password": p
+        })
+
+        if resp.get("status") == "success":
             self.hide()
-            self.s_win = student.StudentWindow(n, p, self)
+            # Pass all 4 required arguments to the StudentWindow
+            self.s_win = student.StudentWindow(n, self.active_teacher_ip, self, resp["classname"])
             self.s_win.show()
         else:
-            QMessageBox.warning(self, "INPUT ERROR", "NAME AND PASSWORD REQUIRED")
+            QMessageBox.warning(self, "Denied", "Credentials not found on network.")
 
 if __name__ == "__main__":
     # 7. MAIN LOOP - Initialize and run application
