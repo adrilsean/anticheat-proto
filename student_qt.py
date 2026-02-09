@@ -7,6 +7,13 @@ from PyQt6.QtGui import QFont
 # Import the shared networking module
 import network_logic
 
+# Button style helper to match teacher UI
+BUTTON_RADIUS = 8
+BUTTON_PADDING = "6px 12px"
+BUTTON_FONT_SIZE = 14
+def make_btn_style(bg_color, text_color="white"):
+    return f"background-color: {bg_color}; color: {text_color}; border-radius: {BUTTON_RADIUS}px; padding: {BUTTON_PADDING}; font-size: {BUTTON_FONT_SIZE}px; font-weight: bold; border: none;"
+
 class StudentWindow(QMainWindow):
     def __init__(self, name, teacher_ip, portal, classname):
         super().__init__()
@@ -36,17 +43,40 @@ class StudentWindow(QMainWindow):
         QApplication.instance().installEventFilter(self)
 
     def refresh_exam_list(self):
-        """Fetch exam list from the teacher via network"""
+        """Fetch exam list and CHECK each one's status from the teacher"""
         self.exam_table.setRowCount(0)
+        
+        # 1. Get the list of exams
         resp = network_logic.network_request(self.teacher_ip, {
             "type": "GET_EXAM_LIST", "classname": self.student_class
         })
+        
         if resp.get("status") == "success":
             for ex_name in resp.get("exams", []):
                 row = self.exam_table.rowCount()
                 self.exam_table.insertRow(row)
-                self.exam_table.setItem(row, 0, QTableWidgetItem(ex_name))
-                self.exam_table.setItem(row, 1, QTableWidgetItem("AVAILABLE"))
+                
+                # 2. Ask the teacher if THIS student has taken THIS exam
+                status_resp = network_logic.network_request(self.teacher_ip, {
+                    "type": "CHECK_TAKEN", 
+                    "exam_name": ex_name, 
+                    "student_name": self.student_name
+                })
+                
+                is_taken = status_resp.get("taken", False)
+                status_text = "COMPLETED" if is_taken else "AVAILABLE"
+                
+                name_item = QTableWidgetItem(ex_name)
+                status_item = QTableWidgetItem(status_text)
+                
+                # Style the status
+                if is_taken:
+                    status_item.setForeground(Qt.GlobalColor.red)
+                else:
+                    status_item.setForeground(Qt.GlobalColor.darkGreen)
+                    
+                self.exam_table.setItem(row, 0, name_item)
+                self.exam_table.setItem(row, 1, status_item)
 
     def init_detection_log_ui(self):
         """Creates the bottom detection log used during exams"""
@@ -94,7 +124,7 @@ class StudentWindow(QMainWindow):
 
         start_btn = QPushButton("START SELECTED EXAM")
         start_btn.setFixedHeight(50)
-        start_btn.setStyleSheet("background-color: #0B2C5D; color: white; font-weight: bold;")
+        start_btn.setStyleSheet(make_btn_style("#0B2C5D", "white"))
         start_btn.clicked.connect(self.check_and_load_exam)
         lay.addWidget(start_btn)
 
@@ -103,27 +133,55 @@ class StudentWindow(QMainWindow):
         self.stack.setCurrentWidget(page)
         
     def refresh_exam_list(self):
-        """Fetch exam list from the teacher via network"""
+        """Fetch exam list and verify status for each item via the network"""
         self.exam_table.setRowCount(0)
+        
+        # 1. Fetch the master exam list for the class
         resp = network_logic.network_request(self.teacher_ip, {
             "type": "GET_EXAM_LIST", "classname": self.student_class
         })
+        
         if resp.get("status") == "success":
             for ex_name in resp.get("exams", []):
                 row = self.exam_table.rowCount()
                 self.exam_table.insertRow(row)
-                self.exam_table.setItem(row, 0, QTableWidgetItem(ex_name))
-                self.exam_table.setItem(row, 1, QTableWidgetItem("AVAILABLE"))
-
-    # ===================== EXAM LOGIC =====================
+                
+                # 2. Handshake: Ask teacher if THIS student took THIS exam
+                status_resp = network_logic.network_request(self.teacher_ip, {
+                    "type": "CHECK_TAKEN", 
+                    "exam_name": ex_name, 
+                    "student_name": self.student_name
+                })
+                
+                is_taken = status_resp.get("taken", False)
+                status_text = "COMPLETED" if is_taken else "AVAILABLE"
+                
+                name_item = QTableWidgetItem(ex_name)
+                status_item = QTableWidgetItem(status_text)
+                
+                # 3. Dynamic Styling
+                if is_taken:
+                    status_item.setForeground(Qt.GlobalColor.red)
+                else:
+                    status_item.setForeground(Qt.GlobalColor.darkGreen)
+                    
+                self.exam_table.setItem(row, 0, name_item)
+                self.exam_table.setItem(row, 1, status_item)
 
     def check_and_load_exam(self):
+        """Block entry if the exam is already marked as completed"""
         row = self.exam_table.currentRow()
         if row == -1: return
         
         ex_name = self.exam_table.item(row, 0).text()
+        status = self.exam_table.item(row, 1).text()
 
-        # Download the specific exam JSON from the teacher
+        # Safety Check: Source of Truth verification
+        if status == "COMPLETED":
+            QMessageBox.warning(self, "Access Denied", "You have already submitted this exam.")
+            return
+
+        # Proceed to download if available
         resp = network_logic.network_request(self.teacher_ip, {
             "type": "GET_EXAM", 
             "exam_name": ex_name
@@ -131,10 +189,8 @@ class StudentWindow(QMainWindow):
         
         if resp.get("status") == "success":
             self.current_exam_data = resp["data"]
-            
             if self.current_exam_data.get("settings", {}).get("shuffle"):
                 random.shuffle(self.current_exam_data["questions"])
-            
             self.setup_welcome_screen(ex_name)
         else:
             QMessageBox.critical(self, "Error", "Failed to download exam from teacher.")
@@ -155,6 +211,7 @@ class StudentWindow(QMainWindow):
 
         start_btn = QPushButton("BEGIN EXAM")
         start_btn.setFixedSize(200, 50)
+        start_btn.setStyleSheet(make_btn_style("#0B2C5D", "white"))
         start_btn.clicked.connect(self.start_exam)
         lay.addWidget(start_btn)
 
@@ -223,6 +280,7 @@ class StudentWindow(QMainWindow):
         outer_lay.addWidget(self.log_dock) 
 
         submit = QPushButton("SUBMIT EXAM")
+        submit.setStyleSheet(make_btn_style("#dc3545", "white"))
         submit.clicked.connect(self.finalize_exam)
         outer_lay.addWidget(submit)
 

@@ -104,42 +104,56 @@ class AntiCheatPortal(QMainWindow):
         back.show()
 
     def show_student_login(self):
-        """4. STUDENT LOGIN PAGE - Display student login form"""
+        """4. STUDENT LOGIN PAGE - Setup login UI with teacher discovery status"""
         self.set_bg("7.png")
         self.clear_ui()
 
-        # 4.1 CREATE ENTRY WIDGETS - Name and password input fields
+        # 4.1 STATUS INDICATOR - The Active Status Display
+        # This label will change color and text when the teacher signal is heard
+        self.status_label = QLabel(self)
+        self.status_label.setGeometry(300, 275, 300, 30)
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Check current status immediately upon loading the page
+        if self.active_teacher_ip:
+            self.status_label.setText("● TEACHER ONLINE")
+            self.status_label.setStyleSheet("color: #28a745; font-weight: bold; font-size: 13px; background: transparent;")
+        else:
+            self.status_label.setText("○ SEARCHING FOR TEACHER...")
+            self.status_label.setStyleSheet("color: #dc3545; font-weight: bold; font-size: 13px; background: transparent;")
+        self.status_label.show()
+
+        # 4.2 CREATE ENTRY WIDGETS
         self.name_entry = QLineEdit(self)
         self.pass_entry = QLineEdit(self)
 
-        # 4.2 APPLY PLACEHOLDER COLOR - Set dark blue color for placeholder text
+        # 4.3 APPLY PLACEHOLDER COLOR
         palette = self.name_entry.palette()
         palette.setColor(QPalette.ColorRole.PlaceholderText, QColor("#0B2C5D"))
         self.name_entry.setPalette(palette)
         self.pass_entry.setPalette(palette)
 
-        # 4.3 NAME ENTRY SETUP - Configure name input field
+        # 4.4 NAME ENTRY SETUP
         self.name_entry.setPlaceholderText("ENTER NAME")
         self.name_entry.setGeometry(300, 313, 300, 45)
         self.name_entry.setStyleSheet("border-radius: 22px; padding-left: 15px; background: transparent; border: 2px solid #0B2C5D; color: #0B2C5D;")
 
-        # 4.4 PASSWORD ENTRY SETUP - Configure password input field with echo mode
+        # 4.5 PASSWORD ENTRY SETUP
         self.pass_entry.setPlaceholderText("ENTER PASSWORD")
         self.pass_entry.setEchoMode(QLineEdit.EchoMode.Password)
         self.pass_entry.setGeometry(300, 368, 300, 45)
         self.pass_entry.setStyleSheet("border-radius: 22px; padding-left: 15px; background: transparent; border: 2px solid #0B2C5D; color: #0B2C5D;")
 
-        # 4.5 SHOW ENTRY WIDGETS - Display input fields
         self.name_entry.show()
         self.pass_entry.show()
 
-        # 4.6 LOGIN BUTTON - Authenticate student and launch exam
+        # 4.6 LOGIN BUTTON
         login = AnimatedBubbleButton("LOGIN", self, radius=24)
         login.setGeometry(324, 445, 252, 50)
         login.clicked.connect(self.launch_student)
         login.show()
 
-        # 4.7 BACK BUTTON - Return to opening page
+        # 4.7 BACK BUTTON
         back = AnimatedBubbleButton("BACK", self, color="#E7F0FE", radius=15, text_col=NU_BLUE)
         back.setGeometry(45, 175, 126, 36)
         back.clicked.connect(self.show_opening_page)

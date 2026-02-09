@@ -11,6 +11,13 @@ from PyQt6.QtGui import QPixmap, QColor, QFont
 NU_BLUE = "#0B2C5D"
 NU_HOVER = "#154c9e"
 
+# Unified button appearance (colors may vary per-button)
+BUTTON_RADIUS = 8
+BUTTON_PADDING = "6px 12px"
+BUTTON_FONT_SIZE = 14
+def make_btn_style(bg_color, text_color="white"):
+    return f"background-color: {bg_color}; color: {text_color}; border-radius: {BUTTON_RADIUS}px; padding: {BUTTON_PADDING}; font-size: {BUTTON_FONT_SIZE}px; font-weight: bold; border: none;"
+
 import socket
 import network_logic
 from PyQt6.QtCore import QThread
@@ -24,39 +31,60 @@ class RequestHandler(QThread):
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind(('0.0.0.0', network_logic.TCP_PORT))
         server.listen(5)
+        
         while True:
             conn, addr = server.accept()
             try:
                 data = conn.recv(1024 * 50).decode('utf-8')
+                if not data: continue
                 req = json.loads(data)
                 resp = {"status": "error"}
 
+                # 1. LOGIN: Scans all rosters
                 if req["type"] == "LOGIN":
-                    # Global search through all rosters
                     for filename in os.listdir("classes"):
                         if filename.endswith(".json"):
                             with open(f"classes/{filename}", "r", encoding="utf-8") as f:
-                                data = json.load(f)
-                                if any(s['name'] == req['name'] and s['password'] == req['password'] for s in data['students']):
-                                    resp = {"status": "success", "classname": data["classname"]}
+                                class_data = json.load(f)
+                                if any(s['name'] == req['name'] and s['password'] == req['password'] for s in class_data['students']):
+                                    resp = {"status": "success", "classname": class_data["classname"]}
                                     break
                         if resp.get("status") == "success": break
 
+                # 2. GET EXAM LIST
                 elif req["type"] == "GET_EXAM_LIST":
                     path = f"classes/{req['classname']}.json"
                     if os.path.exists(path):
                         with open(path, "r", encoding="utf-8") as f:
                             resp = {"status": "success", "exams": json.load(f).get("exams", [])}
 
+                # 3. CHECK TAKEN: Verification logic
+                elif req["type"] == "CHECK_TAKEN":
+                    filename = f"{req['exam_name']}_{req['student_name']}.json"
+                    if os.path.exists(f"logs/{filename}"):
+                        resp = {"status": "success", "taken": True}
+                    else:
+                        resp = {"status": "success", "taken": False}
+
+                # 4. GET EXAM: Download content
                 elif req["type"] == "GET_EXAM":
                     path = f"exams/{req['exam_name']}.json"
                     if os.path.exists(path):
                         with open(path, "r", encoding="utf-8") as f:
                             resp = {"status": "success", "data": json.load(f)}
 
+                # 5. SUBMIT LOG: Save results
+                elif req["type"] == "SUBMIT_LOG":
+                    os.makedirs("logs", exist_ok=True)
+                    filename = f"{req['exam_name']}_{req['student_name']}.json"
+                    with open(f"logs/{filename}", "w", encoding="utf-8") as f:
+                        json.dump(req, f, indent=4)
+                    resp = {"status": "success"}
+
                 conn.send(json.dumps(resp).encode('utf-8'))
             except: pass
-            finally: conn.close()
+            finally:
+                conn.close()
             
 class AnimatedBubbleButton(QPushButton):
     def __init__(self, text, parent=None, color=NU_BLUE, radius=25, text_col="white"):
@@ -145,9 +173,8 @@ class TeacherWindow(QMainWindow):
         self.ans_stack = QStackedWidget()
         self.ans_stack.setFixedHeight(160) 
         
-        # 1. MCQ UI (Compact 2x2 Grid)
+        # 1. MCQ UI (4 vertical rows)
         mcq_w = QWidget(); mcq_v = QVBoxLayout(mcq_w)
-        mcq_grid = QGridLayout()
         self.mcq_ins = []; self.mcq_sel = QButtonGroup(self)
         for i in range(4):
             opt_hbox = QHBoxLayout()
@@ -155,9 +182,8 @@ class TeacherWindow(QMainWindow):
             inp = QLineEdit(); inp.setPlaceholderText(f"Option {i+1}")
             self.mcq_ins.append(inp)
             opt_hbox.addWidget(rb); opt_hbox.addWidget(inp)
-            mcq_grid.addLayout(opt_hbox, i // 2, i % 2)
-        mcq_v.addLayout(mcq_grid)
-        mcq_v.addStretch() 
+            mcq_v.addLayout(opt_hbox)
+        mcq_v.addStretch()
         self.ans_stack.addWidget(mcq_w)
         
         # 2. TEXT UI
@@ -425,11 +451,12 @@ class TeacherWindow(QMainWindow):
         
         # NEW: Copy scores button for Excel
         copy_btn = QPushButton("📋 COPY SCORES FOR EXCEL")
-        copy_btn.setStyleSheet("background-color: #28a745; color: white; font-weight: bold; padding: 5px;")
+        copy_btn.setStyleSheet(make_btn_style("#28a745", "white"))
         copy_btn.clicked.connect(self.copy_scores_to_clipboard)
         btn_frame.addWidget(copy_btn)
 
         refresh_btn = QPushButton("REFRESH LIST")
+        refresh_btn.setStyleSheet(make_btn_style(NU_BLUE, "white"))
         refresh_btn.clicked.connect(self.init_log_filters)
         btn_frame.addWidget(refresh_btn)
         
@@ -702,6 +729,7 @@ class TeacherWindow(QMainWindow):
             lay.addWidget(text)
             
             btn = QPushButton("Import")
+            btn.setStyleSheet(make_btn_style(NU_BLUE, "white"))
             lay.addWidget(btn)
             
             def process():
