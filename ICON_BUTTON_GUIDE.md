@@ -5,6 +5,7 @@
 I've added a new **`IconSquareButton`** class to replace the rounded bubble buttons in your teacher portal menu. These are square buttons (140x140px) with emoji icons on top and text below.
 
 ### Features:
+
 - **Square shape** (not rounded)
 - **Icon + Text layout** (icon on top, text below)
 - **Hover effects** (color transitions on hover)
@@ -14,18 +15,19 @@ I've added a new **`IconSquareButton`** class to replace the rounded bubble butt
 
 ## Menu Options (Currently Configured)
 
-| Button | Icon | Text |
-|--------|------|------|
-| Generate Exam | 📝 | Generate Exam |
-| View Logs | 📊 | View Exam Logs |
-| Create Class | 👥 | Create New Class |
-| Manage Classes | ⚙️ | Manage Classes |
+| Button         | Icon | Text             |
+| -------------- | ---- | ---------------- |
+| Generate Exam  | 📝   | Generate Exam    |
+| View Logs      | 📊   | View Exam Logs   |
+| Create Class   | 👥   | Create New Class |
+| Manage Classes | ⚙️   | Manage Classes   |
 
 ---
 
 ## Customization Options
 
 ### Change Icons
+
 Edit the menu_options in `main_qt.py` → `show_teacher_page()` method:
 
 ```python
@@ -40,18 +42,21 @@ menu_options = [
 ### Suggested Emoji Combinations
 
 **Academic Theme:**
+
 - 📝 (📋, ✍️) - Generate Exam
 - 📊 (📈, 📉) - View Logs
 - 👥 (🎓, 👨‍🎓) - Create Class
 - ⚙️ (🔧, ⚙️) - Manage Class
 
 **Modern Minimal:**
+
 - 📄 - Exam
 - 📑 - Logs
 - 👤 - Students
 - ⚡ - Settings
 
 **Colorful:**
+
 - 🎯 - Exam
 - 🔍 - Logs
 - 🌟 - Class
@@ -68,6 +73,7 @@ btn = IconSquareButton(text, icon_char=icon, parent=self, color=NU_BLUE, size=14
 ```
 
 Current layout (900px width):
+
 - Button size: 140×140px
 - Left margin: 380px (centers button)
 - Vertical spacing: 115px between buttons
@@ -77,10 +83,12 @@ Current layout (900px width):
 ## Colors
 
 ### Theme Colors Available:
+
 - `NU_BLUE` (#0B2C5D) - Main color (default)
 - Custom colors - Pass any hex color code
 
 Example with custom color:
+
 ```python
 btn = IconSquareButton("Custom", "🎨", parent=self, color="#FF6B6B", size=140)
 ```
@@ -90,6 +98,7 @@ btn = IconSquareButton("Custom", "🎨", parent=self, color="#FF6B6B", size=140)
 ## Button Customization
 
 Full IconSquareButton signature:
+
 ```python
 IconSquareButton(
     text,                    # Button label text
@@ -116,6 +125,7 @@ def setButtonIcon(self, icon_path):
 ```
 
 Create icons folder and use:
+
 ```python
 btn.setButtonIcon("icons/exam.png")
 ```
