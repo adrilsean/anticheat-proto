@@ -14,15 +14,15 @@ BUTTON_FONT_SIZE = 14
 def make_btn_style(bg_color, text_color="white"):
     return f"background-color: {bg_color}; color: {text_color}; border-radius: {BUTTON_RADIUS}px; padding: {BUTTON_PADDING}; font-size: {BUTTON_FONT_SIZE}px; font-weight: bold; border: none;"
 
-class StudentWindow(QMainWindow):
+class StudentWindow(QWidget):
     def __init__(self, name, teacher_ip, portal, classname):
-        super().__init__()
+        super().__init__(portal)
         # 1. ASSIGN VARIABLES FIRST
         self.portal = portal
         self.teacher_ip = teacher_ip
         self.student_name = name
         self.student_class = classname
-        
+
         # State Variables
         self.exam_active = False
         self.current_exam_data = {}
@@ -31,13 +31,15 @@ class StudentWindow(QMainWindow):
         self.start_time = None
         self.timer_id = QTimer()
 
-        # 2. UI Setup
-        self.setWindowTitle("Proctora Student Portal")
+        # 2. UI Setup (embedded widget)
         self.setFixedSize(900, 600)
+        self.setGeometry(0, 0, 900, 600)
         self.stack = QStackedWidget()
-        self.setCentralWidget(self.stack)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.addWidget(self.stack)
         self.init_detection_log_ui()
-        
+
         # 3. Enter Dashboard
         self.init_dashboard_view()
         QApplication.instance().installEventFilter(self)
@@ -106,10 +108,30 @@ class StudentWindow(QMainWindow):
 
     def init_dashboard_view(self):
         page = QWidget(); lay = QVBoxLayout(page)
-        
+
+        # Top row with back button and header
+        top_row = QWidget(); top_layout = QHBoxLayout(top_row)
+        back_btn = QPushButton("← Home")
+        back_btn.setFixedSize(90, 34)
+        back_btn.clicked.connect(self.return_to_portal)
+
+        # Layout: back button | stretch | centered header | stretch | placeholder
+        # The placeholder matches the back button size so the header remains centered
+        top_layout.addWidget(back_btn)
+        top_layout.addStretch()
+
         header = QLabel(f"Welcome, {self.student_name}")
         header.setStyleSheet("font-size: 22px; font-weight: bold; color: #0B2C5D;")
-        lay.addWidget(header)
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        top_layout.addWidget(header)
+        top_layout.addStretch()
+
+        placeholder = QWidget()
+        placeholder.setFixedSize(90, 34)
+        top_layout.addWidget(placeholder)
+
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        lay.addWidget(top_row)
 
         # Display the class assigned by the teacher
         class_info = QLabel(f"Current Class: <b>{self.student_class}</b>")
@@ -131,6 +153,26 @@ class StudentWindow(QMainWindow):
         self.refresh_exam_list()
         self.stack.addWidget(page)
         self.stack.setCurrentWidget(page)
+
+    def return_to_portal(self):
+        """Return to portal, clean up this student widget, and show login page."""
+        # Stop any active exam timers
+        try:
+            self.timer_id.stop()
+        except Exception:
+            pass
+        
+        self.hide()
+        try:
+            # Clear the reference in portal and show opening page
+            self.portal.s_win = None
+            self.portal.show_opening_page()
+            self.portal.show()
+        except Exception:
+            try:
+                self.portal.show()
+            except Exception:
+                pass
 
     def check_and_load_exam(self):
         """Block entry if the exam is already marked as completed"""
@@ -162,6 +204,14 @@ class StudentWindow(QMainWindow):
     def setup_welcome_screen(self, name):
         page = QWidget(); lay = QVBoxLayout(page)
         lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Add a top back button to return to the dashboard
+        back_row = QWidget(); back_layout = QHBoxLayout(back_row)
+        back_btn = QPushButton("← Back")
+        back_btn.setFixedSize(90, 34)
+        back_btn.clicked.connect(self.init_dashboard_view)
+        back_layout.addWidget(back_btn, 0, Qt.AlignmentFlag.AlignLeft)
+        back_layout.setContentsMargins(0, 0, 0, 0)
+        lay.addWidget(back_row)
 
         lay.addWidget(QLabel(f"<h2>Exam: {name}</h2>"))
         
@@ -344,5 +394,8 @@ class StudentWindow(QMainWindow):
             if res == QMessageBox.StandardButton.No:
                 event.ignore()
                 return
-        self.portal.show()
-        event.accept()
+        # If no exam in progress, treat the window close as a full app exit
+        try:
+            QApplication.instance().quit()
+        except Exception:
+            event.accept()

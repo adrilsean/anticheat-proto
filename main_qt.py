@@ -1,7 +1,7 @@
 import sys
 import os
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QMessageBox, QWidget
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap, QPalette, QColor
 
 # Import the other windows
@@ -42,15 +42,39 @@ class AntiCheatPortal(QMainWindow):
 
     def clear_ui(self):
         """1.4 CLEAR UI - Remove all widgets except background"""
+        # Prevent dangling references to widgets that will be deleted
+        if getattr(self, 'status_label', None) is not None:
+            self.status_label = None
+
+        # Preserve embedded student/teacher widgets so they are reusable
+        preserve = set()
+        if getattr(self, 's_win', None) is not None:
+            preserve.add(self.s_win)
+        if getattr(self, 't_win', None) is not None:
+            preserve.add(self.t_win)
+
         for child in self.findChildren(QWidget):
-            if child != self.bg_label: 
-                child.deleteLater()
+            if child == self.bg_label or child in preserve:
+                continue
+            child.deleteLater()
 
     def on_teacher_discovered(self, info):
-        self.active_teacher_ip = info["ip"]
-        if hasattr(self, 'status_label'):
-            self.status_label.setText(f"Connected: {len(info['available_classes'])} Classes Active")
-            self.status_label.setStyleSheet("color: #28a745; font-weight: bold;")
+        # Save active teacher address immediately
+        self.active_teacher_ip = info.get("ip")
+        # Defer UI update to the main thread to avoid touching deleted widgets
+        try:
+            QTimer.singleShot(0, lambda: self._apply_teacher_info(info))
+        except Exception:
+            pass
+
+    def _apply_teacher_info(self, info):
+        try:
+            if hasattr(self, 'status_label') and getattr(self, 'status_label', None) is not None:
+                self.status_label.setText(f"Connected: {len(info.get('available_classes', []))} Classes Active")
+                self.status_label.setStyleSheet("color: #28a745; font-weight: bold;")
+        except Exception:
+            # Widget was likely deleted; ignore update
+            pass
 
     def show_opening_page(self):
         """2. OPENING PAGE - Modernized UI with Logo and Coded Text"""
@@ -142,6 +166,15 @@ class AntiCheatPortal(QMainWindow):
 
     def show_student_login(self):
         """4. STUDENT LOGIN - Professionalized with Coded Labels"""
+        # Destroy old student widget if it exists
+        if hasattr(self, 's_win') and self.s_win is not None:
+            try:
+                self.s_win.hide()
+                self.s_win.deleteLater()
+            except Exception:
+                pass
+            self.s_win = None
+        
         self.clear_ui()
         self.bg_label.setStyleSheet("background-color: #F5DEB3;")
 
@@ -212,10 +245,25 @@ class AntiCheatPortal(QMainWindow):
         })
 
         if resp.get("status") == "success":
-            self.hide()
-            # Pass all 4 required arguments to the StudentWindow
-            self.s_win = student.StudentWindow(n, self.active_teacher_ip, self, resp["classname"])
-            self.s_win.show()
+            # Embed the student UI into this main window instead of opening a new top-level window
+            # Reuse existing student widget if present
+            if hasattr(self, 's_win') and self.s_win is not None:
+                self.s_win.student_name = n
+                self.s_win.teacher_ip = self.active_teacher_ip
+                self.s_win.student_class = resp.get("classname")
+                try:
+                    self.s_win.refresh_exam_list()
+                except Exception:
+                    pass
+                # Ensure it's visible
+                self.s_win.show()
+            else:
+                # Clear current UI and create embedded student widget
+                self.clear_ui()
+                self.s_win = student.StudentWindow(n, self.active_teacher_ip, self, resp["classname"])
+                self.s_win.setParent(self)
+                self.s_win.setGeometry(0, 0, 900, 600)
+                self.s_win.show()
         else:
             QMessageBox.warning(self, "Denied", "Credentials not found on network.")
 
