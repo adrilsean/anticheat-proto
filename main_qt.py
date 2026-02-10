@@ -53,26 +53,50 @@ class AntiCheatPortal(QMainWindow):
             self.status_label.setStyleSheet("color: #28a745; font-weight: bold;")
 
     def show_opening_page(self):
-        """2. OPENING PAGE - Display main entry screen with Teacher/Student buttons"""
-        self.set_bg("67 (2).png")
+        """2. OPENING PAGE - Modernized UI with Logo and Coded Text"""
         self.clear_ui()
+        # Instead of a heavy image, use a clean background or a simple logo
+        self.bg_label.setPixmap(QPixmap()) # Clear background
+        self.bg_label.setStyleSheet("background-color: #F8DD70;") 
 
-        # 2.1 TEACHER BUTTON - Navigate to teacher panel
-        self.btn_t = AnimatedBubbleButton("TEACHER", self, radius=24)
-        self.btn_t.setGeometry(324, 345, 252, 50)
+        # 2.1 ADD LOGO
+        self.logo = QLabel(self)
+        self.logo.setPixmap(QPixmap("logo.png").scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        self.logo.setGeometry(375, 80, 150, 150)
+        self.logo.show()
+
+        # 2.2 ADD APP TITLE
+        self.title = QLabel("PROCTORA", self)
+        self.title.setGeometry(0, 240, 900, 50)
+        self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.title.setStyleSheet("font-size: 32px; font-weight: bold; color: #0B2C5D; letter-spacing: 2px;")
+        self.title.show()
+
+        # 2.3 SUBTITLE
+        self.subtitle = QLabel("Anti-Cheat Examination System", self)
+        self.subtitle.setGeometry(0, 285, 900, 30)
+        self.subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.subtitle.setStyleSheet("font-size: 14px; color: #666; font-style: italic;")
+        self.subtitle.show()
+
+        # 2.4 BUTTONS (Styled as modern blocks)
+        self.btn_t = AnimatedBubbleButton("ENTER TEACHER PORTAL", self, radius=8)
+        self.btn_t.setGeometry(300, 350, 300, 50)
         self.btn_t.clicked.connect(self.show_teacher_page)
         self.btn_t.show()
 
-        # 2.2 STUDENT BUTTON - Navigate to student login
-        self.btn_s = AnimatedBubbleButton("STUDENT", self, radius=24)
-        self.btn_s.setGeometry(324, 418, 252, 50)
+        self.btn_s = AnimatedBubbleButton("ENTER STUDENT PORTAL", self, radius=8, color="#ffffff", text_col="#0B2C5D")
+        self.btn_s.setGeometry(300, 415, 300, 50)
+        # Add a subtle border to the white button
+        self.btn_s.setStyleSheet(self.btn_s.styleSheet() + "border: 2px solid #0B2C5D;")
         self.btn_s.clicked.connect(self.show_student_login)
         self.btn_s.show()
 
     def show_teacher_page(self):
         """3. TEACHER PAGE - Hook networking and display menu"""
-        self.set_bg("69.png")
         self.clear_ui()
+        self.bg_label.setPixmap(QPixmap())
+        self.bg_label.setStyleSheet("background-color: #F5DEB3;")
 
         if not self.server_started:
             # Start the Lighthouse (UDP) and the Server (TCP)
@@ -84,81 +108,90 @@ class AntiCheatPortal(QMainWindow):
             self.server_thread.start()
             self.server_started = True
 
+        # 3.0 ADD LOGO
+        self.logo_teacher = QLabel(self)
+        self.logo_teacher.setPixmap(QPixmap("logo.png").scaled(120, 120, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        self.logo_teacher.setGeometry(390, 10, 120, 120)
+        self.logo_teacher.show()
+
+        # 3.0B ADD TITLE
+        self.teacher_title = QLabel("TEACHER CONTROL PANEL", self)
+        self.teacher_title.setGeometry(0, 135, 900, 45)
+        self.teacher_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.teacher_title.setStyleSheet("font-size: 28px; font-weight: bold; color: #0B2C5D;")
+        self.teacher_title.show()
+
         # 3.1 MENU OPTIONS (Existing code continues)
         options = [
-            ("GENERATE EXAM", 251, "exam"),
-            ("VIEW EXAM LOGS", 325, "logs"),
-            ("CREATE NEW CLASS", 406, "create_class"),
-            ("MANAGE CLASSES", 484, "manage_class")
+            ("GENERATE EXAM", 200, "exam"),
+            ("VIEW EXAM LOGS", 270, "logs"),
+            ("CREATE NEW CLASS", 340, "create_class"),
+            ("MANAGE CLASSES", 410, "manage_class")
         ]
 
         for text, y, key in options:
-            btn = AnimatedBubbleButton(text.upper(), self, radius=20)
-            btn.setGeometry(295, y, 288, 44)
+            btn = AnimatedBubbleButton(text.title(), self, radius=8, animate=False)
+            btn.setGeometry(306, y, 288, 44)
             btn.clicked.connect(lambda ch, k=key: self.launch_teacher(k))
             btn.show()
 
-        back = AnimatedBubbleButton("BACK", self, color="#E7F0FE", radius=15, text_col=NU_BLUE)
-        back.setGeometry(89, 250, 126, 36)
+        back = AnimatedBubbleButton("← Back", self, color="transparent", radius=0, text_col=NU_BLUE, animate=False)
+        back.setGeometry(15, 15, 100, 30)
         back.clicked.connect(self.show_opening_page)
         back.show()
 
     def show_student_login(self):
-        """4. STUDENT LOGIN PAGE - Setup login UI with teacher discovery status"""
-        self.set_bg("7.png")
+        """4. STUDENT LOGIN - Professionalized with Coded Labels"""
         self.clear_ui()
+        self.bg_label.setStyleSheet("background-color: #F5DEB3;")
 
-        # 4.1 STATUS INDICATOR - The Active Status Display
-        # This label will change color and text when the teacher signal is heard
+        # 4.1 LOGO (Smaller for Login Page)
+        self.logo_sm = QLabel(self)
+        self.logo_sm.setPixmap(QPixmap("logo.png").scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        self.logo_sm.setGeometry(410, 50, 80, 80)
+        self.logo_sm.show()
+
+        # 4.2 HEADER
+        self.login_header = QLabel("STUDENT SIGN-IN", self)
+        self.login_header.setGeometry(0, 140, 900, 40)
+        self.login_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.login_header.setStyleSheet("font-size: 24px; font-weight: bold; color: #0B2C5D;")
+        self.login_header.show()
+
+        # 4.3 STATUS INDICATOR (Live)
         self.status_label = QLabel(self)
-        self.status_label.setGeometry(300, 275, 300, 30)
+        self.status_label.setGeometry(300, 185, 300, 30)
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        # Check current status immediately upon loading the page
+        # Show connected status if a teacher was discovered, otherwise show offline message
         if self.active_teacher_ip:
-            self.status_label.setText("● TEACHER ONLINE")
-            self.status_label.setStyleSheet("color: #28a745; font-weight: bold; font-size: 13px; background: transparent;")
+            self.on_teacher_discovered({"ip": self.active_teacher_ip, "available_classes": []})
         else:
-            self.status_label.setText("○ SEARCHING FOR TEACHER...")
-            self.status_label.setStyleSheet("color: #dc3545; font-weight: bold; font-size: 13px; background: transparent;")
+            self.status_label.setText("Offline — No teacher detected")
+            self.status_label.setStyleSheet("color: #dc3545; font-style: italic; font-weight: bold;")
         self.status_label.show()
 
-        # 4.2 CREATE ENTRY WIDGETS
+        # 4.4 INPUTS
         self.name_entry = QLineEdit(self)
-        self.pass_entry = QLineEdit(self)
-
-        # 4.3 APPLY PLACEHOLDER COLOR
-        palette = self.name_entry.palette()
-        palette.setColor(QPalette.ColorRole.PlaceholderText, QColor("#0B2C5D"))
-        self.name_entry.setPalette(palette)
-        self.pass_entry.setPalette(palette)
-
-        # 4.4 NAME ENTRY SETUP
-        self.name_entry.setPlaceholderText("ENTER NAME")
-        self.name_entry.setGeometry(300, 313, 300, 45)
-        self.name_entry.setStyleSheet("border-radius: 22px; padding-left: 15px; background: transparent; border: 2px solid #0B2C5D; color: #0B2C5D;")
-
-        # 4.5 PASSWORD ENTRY SETUP
-        self.pass_entry.setPlaceholderText("ENTER PASSWORD")
-        self.pass_entry.setEchoMode(QLineEdit.EchoMode.Password)
-        self.pass_entry.setGeometry(300, 368, 300, 45)
-        self.pass_entry.setStyleSheet("border-radius: 22px; padding-left: 15px; background: transparent; border: 2px solid #0B2C5D; color: #0B2C5D;")
-
+        self.name_entry.setPlaceholderText("Full Name")
+        self.name_entry.setGeometry(300, 250, 300, 45)
         self.name_entry.show()
+
+        self.pass_entry = QLineEdit(self)
+        self.pass_entry.setPlaceholderText("Access Password")
+        self.pass_entry.setEchoMode(QLineEdit.EchoMode.Password)
+        self.pass_entry.setGeometry(300, 310, 300, 45)
         self.pass_entry.show()
 
-        # 4.6 LOGIN BUTTON
-        login = AnimatedBubbleButton("LOGIN", self, radius=24)
-        login.setGeometry(324, 445, 252, 50)
+        # 4.5 BUTTONS
+        login = AnimatedBubbleButton("SIGN IN", self, radius=8)
+        login.setGeometry(300, 380, 300, 50)
         login.clicked.connect(self.launch_student)
         login.show()
 
-        # 4.7 BACK BUTTON
-        back = AnimatedBubbleButton("BACK", self, color="#E7F0FE", radius=15, text_col=NU_BLUE)
-        back.setGeometry(45, 175, 126, 36)
+        back = AnimatedBubbleButton("CANCEL", self, color="#f5f5f5", radius=8, text_col="#666")
+        back.setGeometry(300, 440, 300, 40)
         back.clicked.connect(self.show_opening_page)
         back.show()
-
     def launch_teacher(self, page):
         """5. LAUNCH TEACHER - Open teacher window for specified page"""
         self.hide()
@@ -189,6 +222,128 @@ class AntiCheatPortal(QMainWindow):
 if __name__ == "__main__":
     # 7. MAIN LOOP - Initialize and run application
     app = QApplication(sys.argv)
+    
+    # Light Mode Stylesheet
+    app.setStyle('Fusion')
+    light_stylesheet = """
+    QMainWindow, QWidget, QDialog {
+        background-color: #f5f5f5;
+        color: #FFD700 ;
+    }
+    QLabel {
+        background-color: transparent;
+        color: #000000;
+    }
+    QLineEdit, QTextEdit, QPlainTextEdit {
+        background-color: #ffffff;
+        color: #000000;
+        border: 1px solid #cccccc;
+        border-radius: 4px;
+        padding: 4px;
+    }
+    QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
+        border: 2px solid #0B2C5D;
+    }
+    QPushButton {
+        background-color: #0B2C5D;
+        color: #ffffff;
+        border: none;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-weight: bold;
+    }
+    QPushButton:hover {
+        background-color: #154c9e;
+    }
+    QPushButton:pressed {
+        background-color: #0a1f47;
+    }
+    QComboBox {
+        background-color: #ffffff;
+        color: #000000;
+        border: 1px solid #cccccc;
+        border-radius: 4px;
+        padding: 2px;
+    }
+    QComboBox:hover {
+        border: 1px solid #0B2C5D;
+    }
+    QCheckBox, QRadioButton {
+        color: #000000;
+        background-color: transparent;
+        spacing: 5px;
+        padding: 1px;
+    }
+    QCheckBox::indicator, QRadioButton::indicator {
+        width: 13px;
+        height: 13px;
+        border: 1.5px solid #0B2C5D;
+        border-radius: 2px;
+        background-color: #ffffff;
+    }
+    QCheckBox::indicator:hover, QRadioButton::indicator:hover {
+        border: 1.5px solid #154c9e;
+        background-color: #f8faff;
+    }
+    QCheckBox::indicator:checked {
+        background-color: #0B2C5D;
+        border: 1.5px solid #0B2C5D;
+    }
+    QRadioButton::indicator {
+        border-radius: 6px;
+    }
+    QRadioButton::indicator:checked {
+        background-color: #0B2C5D;
+        border: 1.5px solid #0B2C5D;
+        border-radius: 6px;
+    }
+    QSpinBox, QDoubleSpinBox {
+        background-color: #ffffff;
+        color: #000000;
+        border: 1px solid #cccccc;
+        border-radius: 4px;
+        padding: 2px;
+    }
+    QGroupBox {
+        color: #000000;
+        border: 1px solid #cccccc;
+        border-radius: 4px;
+        margin-top: 8px;
+        padding-top: 8px;
+    }
+    QGroupBox::title {
+        subcontrol-origin: margin;
+        left: 10px;
+        padding: 0px 3px 0px 3px;
+    }
+    QListWidget, QTableWidget, QTreeWidget {
+        background-color: #ffffff;
+        color: #000000;
+        border: 1px solid #cccccc;
+        gridline-color: #e0e0e0;
+    }
+    QHeaderView::section {
+        background-color: #e8e8e8;
+        color: #000000;
+        padding: 4px;
+        border: 1px solid #cccccc;
+    }
+    QScrollBar:vertical {
+        background-color: #f5f5f5;
+        width: 12px;
+        border: none;
+    }
+    QScrollBar::handle:vertical {
+        background-color: #cccccc;
+        border-radius: 6px;
+        min-height: 20px;
+    }
+    QScrollBar::handle:vertical:hover {
+        background-color: #999999;
+    }
+    """
+    app.setStyleSheet(light_stylesheet)
+    
     portal = AntiCheatPortal()
     portal.show()
     sys.exit(app.exec())

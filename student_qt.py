@@ -93,9 +93,9 @@ class StudentWindow(QMainWindow):
         self.detection_display.setFont(QFont("Courier", 9))
         self.detection_display.setStyleSheet("""
             QTextEdit {
-                background-color: #f0f0f0; 
-                color: #ff0000;
-                border: 1px solid #ccc;
+                background-color: #ffffff; 
+                color: #d32f2f;
+                border: 1px solid #cccccc;
                 padding: 5px;
             }
         """)
@@ -131,42 +131,6 @@ class StudentWindow(QMainWindow):
         self.refresh_exam_list()
         self.stack.addWidget(page)
         self.stack.setCurrentWidget(page)
-        
-    def refresh_exam_list(self):
-        """Fetch exam list and verify status for each item via the network"""
-        self.exam_table.setRowCount(0)
-        
-        # 1. Fetch the master exam list for the class
-        resp = network_logic.network_request(self.teacher_ip, {
-            "type": "GET_EXAM_LIST", "classname": self.student_class
-        })
-        
-        if resp.get("status") == "success":
-            for ex_name in resp.get("exams", []):
-                row = self.exam_table.rowCount()
-                self.exam_table.insertRow(row)
-                
-                # 2. Handshake: Ask teacher if THIS student took THIS exam
-                status_resp = network_logic.network_request(self.teacher_ip, {
-                    "type": "CHECK_TAKEN", 
-                    "exam_name": ex_name, 
-                    "student_name": self.student_name
-                })
-                
-                is_taken = status_resp.get("taken", False)
-                status_text = "COMPLETED" if is_taken else "AVAILABLE"
-                
-                name_item = QTableWidgetItem(ex_name)
-                status_item = QTableWidgetItem(status_text)
-                
-                # 3. Dynamic Styling
-                if is_taken:
-                    status_item.setForeground(Qt.GlobalColor.red)
-                else:
-                    status_item.setForeground(Qt.GlobalColor.darkGreen)
-                    
-                self.exam_table.setItem(row, 0, name_item)
-                self.exam_table.setItem(row, 1, status_item)
 
     def check_and_load_exam(self):
         """Block entry if the exam is already marked as completed"""
@@ -302,7 +266,6 @@ class StudentWindow(QMainWindow):
         self.timer_id.stop()
         
         score = 0
-        user_answers = []
 
         for i, q in enumerate(self.current_exam_data["questions"]):
             ans_widget = self.answer_widgets[i]
@@ -318,7 +281,6 @@ class StudentWindow(QMainWindow):
                 val = ans_widget.text().strip()
                 if val.lower() == q.get("answer_text", "").strip().lower(): is_correct = True
             
-            user_answers.append(val)
             if is_correct: score += 1
 
         finish_time = datetime.now()

@@ -1,0 +1,53 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run main_qt (Instance 1 - Shared Panel)",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "main_qt.py"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "isBackground": false
+        },
+        {
+            "label": "Run main_qt (Instance 2 - Dedicated Panel)",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "main_qt.py"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "dedicated",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "isBackground": false
+        },
+        {
+            "label": "Run Both Instances",
+            "dependsOn": [
+                "Run main_qt (Instance 1 - Shared Panel)",
+                "Run main_qt (Instance 2 - Dedicated Panel)"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

@@ -87,12 +87,13 @@ class RequestHandler(QThread):
                 conn.close()
             
 class AnimatedBubbleButton(QPushButton):
-    def __init__(self, text, parent=None, color=NU_BLUE, radius=25, text_col="white"):
+    def __init__(self, text, parent=None, color=NU_BLUE, radius=25, text_col="white", animate=True):
         super().__init__(text, parent)
         self.default_color = color
         self.hover_color = NU_HOVER if color == NU_BLUE else "#c5d9f7"
         self.radius = radius
         self.text_col = text_col
+        self.animate = animate
         self.orig_geo = None
         self.setStyleSheet(self._get_style(self.default_color))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -104,14 +105,15 @@ class AnimatedBubbleButton(QPushButton):
         return f"QPushButton {{ background-color: {bg_color}; color: {self.text_col}; border-radius: {self.radius}px; font-size: 15px; font-weight: bold; border: none; }}"
 
     def enterEvent(self, event):
-        if not self.orig_geo: self.orig_geo = self.geometry()
         self.setStyleSheet(self._get_style(self.hover_color))
-        self._animation.setEndValue(QRect(self.orig_geo.x() - 8, self.orig_geo.y() - 3, self.orig_geo.width() + 16, self.orig_geo.height() + 6))
-        self._animation.start()
+        if self.animate:
+            if not self.orig_geo: self.orig_geo = self.geometry()
+            self._animation.setEndValue(QRect(self.orig_geo.x() - 8, self.orig_geo.y() - 3, self.orig_geo.width() + 16, self.orig_geo.height() + 6))
+            self._animation.start()
 
     def leaveEvent(self, event):
         self.setStyleSheet(self._get_style(self.default_color))
-        if self.orig_geo:
+        if self.animate and self.orig_geo:
             self._animation.setEndValue(self.orig_geo)
             self._animation.start()
 
@@ -144,30 +146,44 @@ class TeacherWindow(QMainWindow):
         
         # ===================== LEFT COLUMN: INPUT AREA =====================
         left = QVBoxLayout()
-        left.setSpacing(10)
+        left.setSpacing(12)
         
-        left.addWidget(QLabel("<b>Exam Name:</b>"))
+        exam_label = QLabel("<b style='font-size: 13px;'>Exam Name</b>")
+        left.addWidget(exam_label)
         self.ex_name_in = QLineEdit()
         self.ex_name_in.setPlaceholderText("e.g., Midterm Quiz 1")
         left.addWidget(self.ex_name_in)
+        left.addSpacing(15)
         
-        self.q_edit_label = QLabel("New Question (1)")
-        self.q_edit_label.setStyleSheet("color: #0B2C5D; font-weight: bold; font-size: 14px;")
+        self.q_edit_label = QLabel("New Question")
+        self.q_edit_label.setStyleSheet("color: #0B2C5D; font-weight: bold; font-size: 13px;")
         left.addWidget(self.q_edit_label)
         
-        left.addWidget(QLabel("Question Text:"))
+        q_label = QLabel("<b style='font-size: 11px;'>Question Text</b>")
+        left.addWidget(q_label)
         self.q_text_in = QLineEdit()
         left.addWidget(self.q_text_in)
+        left.addSpacing(12)
         
         # TYPE SELECTION
+        type_header = QLabel("<b style='font-size: 11px;'>Answer Type</b>")
+        left.addWidget(type_header)
         self.type_grp = QButtonGroup(self)
         type_lay = QHBoxLayout()
-        for i, t in enumerate(["multiple choice", "text", "tf"]):
+        type_lay.setSpacing(15)
+        for i, t in enumerate(["multiple choice", "text", "true or false"]):
             rb = QRadioButton(t.upper())
+            rb_font = rb.font()
+            rb_font.setPointSize(9)
+            rb.setFont(rb_font)
             self.type_grp.addButton(rb, i)
             type_lay.addWidget(rb)
             if i == 0: rb.setChecked(True)
         left.addLayout(type_lay)
+        left.addSpacing(12)
+        
+        answers_header = QLabel("<b style='font-size: 11px;'>Correct Answer</b>")
+        left.addWidget(answers_header)
         
         # ANSWER STACK (Fixed height to keep the input area compact)
         self.ans_stack = QStackedWidget()
@@ -175,11 +191,16 @@ class TeacherWindow(QMainWindow):
         
         # 1. MCQ UI (4 vertical rows)
         mcq_w = QWidget(); mcq_v = QVBoxLayout(mcq_w)
+        mcq_v.setSpacing(6)
         self.mcq_ins = []; self.mcq_sel = QButtonGroup(self)
         for i in range(4):
             opt_hbox = QHBoxLayout()
+            opt_hbox.setSpacing(8)
             rb = QRadioButton(); self.mcq_sel.addButton(rb, i)
             inp = QLineEdit(); inp.setPlaceholderText(f"Option {i+1}")
+            inp_font = inp.font()
+            inp_font.setPointSize(9)
+            inp.setFont(inp_font)
             self.mcq_ins.append(inp)
             opt_hbox.addWidget(rb); opt_hbox.addWidget(inp)
             mcq_v.addLayout(opt_hbox)
@@ -194,12 +215,12 @@ class TeacherWindow(QMainWindow):
         
         # 3. TF UI
         tf_w = QWidget(); tf_l = QVBoxLayout(tf_w)
-        tf_h = QHBoxLayout()
         self.tf_sel = QButtonGroup(self)
         t_rb = QRadioButton("TRUE"); f_rb = QRadioButton("FALSE")
         self.tf_sel.addButton(t_rb, 1); self.tf_sel.addButton(f_rb, 0)
-        tf_h.addWidget(t_rb); tf_h.addWidget(f_rb); tf_h.addStretch()
-        tf_l.addLayout(tf_h); tf_l.addStretch()
+        tf_l.addWidget(t_rb)
+        tf_l.addWidget(f_rb)
+        tf_l.addStretch()
         self.ans_stack.addWidget(tf_w)
         
         left.addWidget(self.ans_stack)
@@ -209,11 +230,14 @@ class TeacherWindow(QMainWindow):
         left.addStretch(1) 
 
         # ACTION BUTTONS (Stuck to Bottom)
-        add_q_btn = AnimatedBubbleButton("ADD / UPDATE QUESTION", color="#28a745")
+        left.addSpacing(8)
+        add_q_btn = AnimatedBubbleButton("Add / Update Question", color="#28a745", radius=0, animate=False)
+        add_q_btn.setMinimumHeight(42)
         add_q_btn.clicked.connect(self.save_question_to_list)
         left.addWidget(add_q_btn)
         
-        clear_q_btn = AnimatedBubbleButton("CLEAR CURRENT FIELDS", color="#6c757d")
+        clear_q_btn = AnimatedBubbleButton("Clear Current Fields", color="#6c757d", radius=0, animate=False)
+        clear_q_btn.setMinimumHeight(38)
         clear_q_btn.clicked.connect(self.clear_question_fields)
         left.addWidget(clear_q_btn)
 
@@ -221,8 +245,10 @@ class TeacherWindow(QMainWindow):
         
         # ===================== RIGHT COLUMN: STRETCHED LIST =====================
         right = QVBoxLayout()
+        right.setSpacing(12)
         
-        right.addWidget(QLabel("<b>Questions List:</b>"))
+        list_header = QLabel("<b style='font-size: 13px;'>Questions List</b>")
+        right.addWidget(list_header)
         self.q_list_disp = QListWidget()
         self.q_list_disp.itemDoubleClicked.connect(self.load_q_for_edit)
         # THE FIX: By default, QListWidget tries to expand. 
@@ -231,7 +257,12 @@ class TeacherWindow(QMainWindow):
         
         # SETTINGS GROUP (Compact)
         settings_box = QGroupBox("Exam Settings")
+        settings_box_font = settings_box.font()
+        settings_box_font.setBold(True)
+        settings_box_font.setPointSize(11)
+        settings_box.setFont(settings_box_font)
         set_lay = QVBoxLayout(settings_box)
+        set_lay.setSpacing(8)
         
         self.shuf_check = QCheckBox("Shuffle Questions")
         set_lay.addWidget(self.shuf_check)
@@ -250,11 +281,13 @@ class TeacherWindow(QMainWindow):
         right.addWidget(settings_box)
 
         # BUTTONS AT BOTTOM
-        final_save = AnimatedBubbleButton("SAVE FULL EXAM")
+        final_save = AnimatedBubbleButton("Save Full Exam", animate=False, radius=0)
+        final_save.setMinimumHeight(42)
         final_save.clicked.connect(self.save_entire_exam)
         right.addWidget(final_save)
         
-        reset_exam_btn = AnimatedBubbleButton("RESET FULL EXAM", color="#dc3545")
+        reset_exam_btn = AnimatedBubbleButton("Reset Full Exam", color="#dc3545", animate=False, radius=0)
+        reset_exam_btn.setMinimumHeight(38)
         reset_exam_btn.clicked.connect(self.reset_full_exam)
         right.addWidget(reset_exam_btn)
 
@@ -449,18 +482,16 @@ class TeacherWindow(QMainWindow):
         # 4.3 Footer Buttons
         btn_frame = QHBoxLayout()
         
-        # NEW: Copy scores button for Excel
-        copy_btn = QPushButton("📋 COPY SCORES FOR EXCEL")
-        copy_btn.setStyleSheet(make_btn_style("#28a745", "white"))
+        # Copy scores button for Excel
+        copy_btn = AnimatedBubbleButton("📋 Copy Scores For Excel", color="#28a745", radius=0, animate=False)
         copy_btn.clicked.connect(self.copy_scores_to_clipboard)
         btn_frame.addWidget(copy_btn)
 
-        refresh_btn = QPushButton("REFRESH LIST")
-        refresh_btn.setStyleSheet(make_btn_style(NU_BLUE, "white"))
+        refresh_btn = AnimatedBubbleButton("Refresh List", color=NU_BLUE, radius=0, animate=False)
         refresh_btn.clicked.connect(self.init_log_filters)
         btn_frame.addWidget(refresh_btn)
         
-        back_btn = AnimatedBubbleButton("BACK", color="#E7F0FE", text_col=NU_BLUE, radius=15)
+        back_btn = AnimatedBubbleButton("Back", color="#E7F0FE", text_col=NU_BLUE, radius=0, animate=False)
         back_btn.clicked.connect(self.close)
         btn_frame.addWidget(back_btn)
         
@@ -568,11 +599,11 @@ class TeacherWindow(QMainWindow):
         self.student_input_text.setPlaceholderText("John Doe\tpass123\nJane Smith\tpass456")
         layout.addWidget(self.student_input_text)
 
-        save_btn = AnimatedBubbleButton("PROCESS & SAVE CLASS", color="#28a745")
+        save_btn = AnimatedBubbleButton("Save Class", color="#28a745", animate=False, radius=0)
         save_btn.clicked.connect(self.save_new_class)
         layout.addWidget(save_btn)
 
-        back_btn = AnimatedBubbleButton("BACK", color="#E7F0FE", text_col=NU_BLUE)
+        back_btn = AnimatedBubbleButton("Back", color="#E7F0FE", text_col=NU_BLUE, animate=False, radius=0)
         back_btn.clicked.connect(self.close)
         layout.addWidget(back_btn)
         self.central.addWidget(page)
@@ -637,20 +668,6 @@ class TeacherWindow(QMainWindow):
         
         QMessageBox.information(self, "Success", f"Class '{name}' created with {len(students)} students.")
         self.close()
-
-        if not students:
-            QMessageBox.warning(self, "Error", "Could not detect Name/Password pairs.")
-            return
-
-        # Matches the reference structure
-        data = {"classname": name, "students": students, "exams": []}
-        
-        os.makedirs("classes", exist_ok=True)
-        with open(f"classes/{name}.json", "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-        
-        QMessageBox.information(self, "Success", f"Class '{name}' created with {len(students)} students.")
-        self.close()
             
     # ===================== 6. MANAGE CLASS (FIXED) =====================
     def setup_manage_class(self):
@@ -684,14 +701,14 @@ class TeacherWindow(QMainWindow):
 
         # Management Buttons
         btn_row = QHBoxLayout()
-        add_s_btn = AnimatedBubbleButton("Add Students", radius=15); add_s_btn.clicked.connect(self.popup_add_students)
-        assign_e_btn = AnimatedBubbleButton("Assign Exam", radius=15); assign_e_btn.clicked.connect(self.popup_assign_exam)
-        del_c_btn = AnimatedBubbleButton("Delete Class", color="#dc3545", radius=15); del_c_btn.clicked.connect(self.delete_current_class)
+        add_s_btn = AnimatedBubbleButton("Add Students", radius=0, animate=False); add_s_btn.clicked.connect(self.popup_add_students)
+        assign_e_btn = AnimatedBubbleButton("Assign Exam", radius=0, animate=False); assign_e_btn.clicked.connect(self.popup_assign_exam)
+        del_c_btn = AnimatedBubbleButton("Delete Class", color="#dc3545", radius=0, animate=False); del_c_btn.clicked.connect(self.delete_current_class)
         
         btn_row.addWidget(add_s_btn); btn_row.addWidget(assign_e_btn); btn_row.addWidget(del_c_btn)
         layout.addLayout(btn_row)
 
-        back_btn = AnimatedBubbleButton("BACK", color="#E7F0FE", text_col=NU_BLUE)
+        back_btn = AnimatedBubbleButton("Back", color="#E7F0FE", text_col=NU_BLUE, animate=False, radius=0)
         back_btn.clicked.connect(self.close)
         layout.addWidget(back_btn)
         

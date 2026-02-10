@@ -1,0 +1,57 @@
+{
+    "classname": "new class",
+    "students": [
+        {
+            "name": "sean",
+            "password": "123"
+        },
+        {
+            "name": "bart",
+            "password": "123"
+        },
+        {
+            "name": "adril",
+            "password": "123"
+        },
+        {
+            "name": "cabagay",
+            "password": "123"
+        },
+        {
+            "name": "gavin",
+            "password": "123"
+        },
+        {
+            "name": "ken",
+            "password": "123"
+        },
+        {
+            "name": "bartolome",
+            "password": "123"
+        },
+        {
+            "name": "mark",
+            "password": "123"
+        },
+        {
+            "name": "gian",
+            "password": "123"
+        },
+        {
+            "name": "kath",
+            "password": "123"
+        },
+        {
+            "name": "jenn",
+            "password": "123"
+        },
+        {
+            "name": "ice",
+            "password": "123"
+        }
+    ],
+    "exams": [
+        "new exam",
+        "timedshuff"
+    ]
+}
