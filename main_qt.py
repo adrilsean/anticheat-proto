@@ -1,6 +1,6 @@
 import sys
 import os
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QMessageBox, QWidget
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QMessageBox, QWidget,QPushButton
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap, QPalette, QColor
 
@@ -104,12 +104,12 @@ class AntiCheatPortal(QMainWindow):
         self.subtitle.show()
 
         # 2.4 BUTTONS (Styled as modern blocks)
-        self.btn_t = AnimatedBubbleButton("ENTER TEACHER PORTAL", self, radius=8)
+        self.btn_t = AnimatedBubbleButton("TEACHER PORTAL", self, radius=8)
         self.btn_t.setGeometry(300, 350, 300, 50)
         self.btn_t.clicked.connect(self.show_teacher_page)
         self.btn_t.show()
 
-        self.btn_s = AnimatedBubbleButton("ENTER STUDENT PORTAL", self, radius=8, color="#ffffff", text_col="#0B2C5D")
+        self.btn_s = AnimatedBubbleButton("STUDENT PORTAL", self, radius=8, color="#ffffff", text_col="#0B2C5D")
         self.btn_s.setGeometry(300, 415, 300, 50)
         # Add a subtle border to the white button
         self.btn_s.setStyleSheet(self.btn_s.styleSheet() + "border: 2px solid #0B2C5D;")
@@ -120,7 +120,7 @@ class AntiCheatPortal(QMainWindow):
         """3. TEACHER PAGE - Hook networking and display menu"""
         self.clear_ui()
         self.bg_label.setPixmap(QPixmap())
-        self.bg_label.setStyleSheet("background-color: #F5DEB3;")
+        self.bg_label.setStyleSheet("background-color: #F8DD70;")
 
         if not self.server_started:
             # Start the Lighthouse (UDP) and the Server (TCP)
@@ -139,7 +139,7 @@ class AntiCheatPortal(QMainWindow):
         self.logo_teacher.show()
 
         # 3.0B ADD TITLE
-        self.teacher_title = QLabel("TEACHER CONTROL PANEL", self)
+        self.teacher_title = QLabel("TEACHER PORTAL", self)
         self.teacher_title.setGeometry(0, 135, 900, 45)
         self.teacher_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.teacher_title.setStyleSheet("font-size: 28px; font-weight: bold; color: #0B2C5D;")
@@ -159,8 +159,9 @@ class AntiCheatPortal(QMainWindow):
             btn.clicked.connect(lambda ch, k=key: self.launch_teacher(k))
             btn.show()
 
-        back = AnimatedBubbleButton("← Back", self, color="transparent", radius=0, text_col=NU_BLUE, animate=False)
-        back.setGeometry(15, 15, 100, 30)
+        back = QPushButton("← Back", self)
+        back.setGeometry(20, 20, 90, 34)
+        back.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
         back.clicked.connect(self.show_opening_page)
         back.show()
 
@@ -176,7 +177,7 @@ class AntiCheatPortal(QMainWindow):
             self.s_win = None
         
         self.clear_ui()
-        self.bg_label.setStyleSheet("background-color: #F5DEB3;")
+        self.bg_label.setStyleSheet("background-color: #F8DD70;")
 
         # 4.1 LOGO (Smaller for Login Page)
         self.logo_sm = QLabel(self)
@@ -213,6 +214,7 @@ class AntiCheatPortal(QMainWindow):
         self.pass_entry.setPlaceholderText("Access Password")
         self.pass_entry.setEchoMode(QLineEdit.EchoMode.Password)
         self.pass_entry.setGeometry(300, 310, 300, 45)
+        self.pass_entry.returnPressed.connect(self.launch_student)
         self.pass_entry.show()
 
         # 4.5 BUTTONS
@@ -221,14 +223,29 @@ class AntiCheatPortal(QMainWindow):
         login.clicked.connect(self.launch_student)
         login.show()
 
-        back = AnimatedBubbleButton("CANCEL", self, color="#f5f5f5", radius=8, text_col="#666")
-        back.setGeometry(300, 440, 300, 40)
+        back = QPushButton("← Back", self)
+        back.setGeometry(20, 20, 90, 34)
+        back.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
         back.clicked.connect(self.show_opening_page)
         back.show()
     def launch_teacher(self, page):
-        """5. LAUNCH TEACHER - Open teacher window for specified page"""
-        self.hide()
+        """5. LAUNCH TEACHER - Embed teacher window for specified page"""
+        # Destroy old teacher widget if it exists
+        if hasattr(self, 't_win') and self.t_win is not None:
+            try:
+                self.t_win.hide()
+                self.t_win.deleteLater()
+            except Exception:
+                pass
+            self.t_win = None
+        
+        self.clear_ui()
+        self.bg_label.setStyleSheet("background-color: #F8DD70;")
+        
+        # Create embedded teacher widget
         self.t_win = teacher.TeacherWindow(page, self)
+        self.t_win.setParent(self)
+        self.t_win.setGeometry(0, 0, 900, 600)
         self.t_win.show()
 
     def launch_student(self):

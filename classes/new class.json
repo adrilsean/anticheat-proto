@@ -52,6 +52,7 @@
     ],
     "exams": [
         "new exam",
-        "timedshuff"
+        "timedshuff",
+        "midterm quiz"
     ]
 }

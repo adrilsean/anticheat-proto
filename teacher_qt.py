@@ -117,19 +117,21 @@ class AnimatedBubbleButton(QPushButton):
             self._animation.setEndValue(self.orig_geo)
             self._animation.start()
 
-class TeacherWindow(QMainWindow):
+class TeacherWindow(QWidget):
     def __init__(self, page_key, portal):
-        super().__init__()
+        super().__init__(portal)
         self.portal = portal
-        self.setWindowTitle(f"Teacher Panel - {page_key.replace('_', ' ').upper()}")
         self.setFixedSize(900, 600)
+        self.setGeometry(0, 0, 900, 600)
         
         os.makedirs("exams", exist_ok=True)
         os.makedirs("classes", exist_ok=True)
         os.makedirs("logs", exist_ok=True)
 
-        self.central = QStackedWidget()
-        self.setCentralWidget(self.central)
+        self.stack = QStackedWidget()
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.addWidget(self.stack)
         
         self.current_questions = []
         self.editing_index = None
@@ -142,18 +144,54 @@ class TeacherWindow(QMainWindow):
 
     def setup_exam_builder(self):
         page = QWidget()
-        main_layout = QHBoxLayout(page)
+        page.setStyleSheet("background-color: #F8DD70;")
+        outer_layout = QVBoxLayout(page)
+        outer_layout.setContentsMargins(20, 20, 20, 20)
+        outer_layout.setSpacing(15)
+        
+        # Header row with back button
+        header_row = QWidget()
+        header_row.setStyleSheet("background-color: #F8DD70;")
+        header_layout = QHBoxLayout(header_row)
+        back_btn = QPushButton("← Back")
+        back_btn.setFixedSize(90, 34)
+        back_btn.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
+        back_btn.clicked.connect(self.return_to_teacher_menu)
+        header_layout.addWidget(back_btn)
+        header_layout.addStretch()
+        title = QLabel("Generate Exam")
+        title.setStyleSheet("font-size: 22px; font-weight: bold; color: #0B2C5D; background-color: #F8DD70;")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(title)
+        header_layout.addStretch()
+        placeholder = QWidget()
+        placeholder.setFixedSize(90, 34)
+        header_layout.addWidget(placeholder)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.addWidget(header_row)
+        
+        # Main content in horizontal layout with container widgets
+        main_layout = QHBoxLayout()
+        main_layout.setSpacing(15)
         
         # ===================== LEFT COLUMN: INPUT AREA =====================
-        left = QVBoxLayout()
+        left_container = QWidget()
+        left_container.setStyleSheet("background-color: #ffffff; border-radius: 6px;")
+        left = QVBoxLayout(left_container)
+        left.setContentsMargins(15, 15, 15, 15)
         left.setSpacing(12)
         
-        exam_label = QLabel("<b style='font-size: 13px;'>Exam Name</b>")
-        left.addWidget(exam_label)
+        # Exam Name - Single Row
+        exam_row = QHBoxLayout()
+        exam_row.setSpacing(10)
+        exam_label = QLabel("<b style='font-size: 13px;'>Exam Name:</b>")
+        exam_label.setFixedWidth(100)
+        exam_row.addWidget(exam_label)
         self.ex_name_in = QLineEdit()
         self.ex_name_in.setPlaceholderText("e.g., Midterm Quiz 1")
-        left.addWidget(self.ex_name_in)
-        left.addSpacing(15)
+        exam_row.addWidget(self.ex_name_in)
+        left.addLayout(exam_row)
+        left.addSpacing(10)
         
         self.q_edit_label = QLabel("New Question")
         self.q_edit_label.setStyleSheet("color: #0B2C5D; font-weight: bold; font-size: 13px;")
@@ -163,7 +201,7 @@ class TeacherWindow(QMainWindow):
         left.addWidget(q_label)
         self.q_text_in = QLineEdit()
         left.addWidget(self.q_text_in)
-        left.addSpacing(12)
+        left.addSpacing(10)
         
         # TYPE SELECTION
         type_header = QLabel("<b style='font-size: 11px;'>Answer Type</b>")
@@ -229,22 +267,28 @@ class TeacherWindow(QMainWindow):
         # THE SPACER: Pushes buttons below to the bottom
         left.addStretch(1) 
 
-        # ACTION BUTTONS (Stuck to Bottom)
-        left.addSpacing(8)
-        add_q_btn = AnimatedBubbleButton("Add / Update Question", color="#28a745", radius=0, animate=False)
-        add_q_btn.setMinimumHeight(42)
-        add_q_btn.clicked.connect(self.save_question_to_list)
-        left.addWidget(add_q_btn)
-        
+        # ACTION BUTTONS (Stuck to Bottom) - Single Row (Clear left, Add right)
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(8)
         clear_q_btn = AnimatedBubbleButton("Clear Current Fields", color="#6c757d", radius=0, animate=False)
         clear_q_btn.setMinimumHeight(38)
         clear_q_btn.clicked.connect(self.clear_question_fields)
-        left.addWidget(clear_q_btn)
+        btn_row.addWidget(clear_q_btn)
+        
+        add_q_btn = AnimatedBubbleButton("Add / Update Question", color="#28a745", radius=0, animate=False)
+        add_q_btn.setMinimumHeight(38)
+        add_q_btn.clicked.connect(self.save_question_to_list)
+        btn_row.addWidget(add_q_btn)
+        
+        left.addLayout(btn_row)
 
-        main_layout.addLayout(left, 2)
+        main_layout.addWidget(left_container, 2)
         
         # ===================== RIGHT COLUMN: STRETCHED LIST =====================
-        right = QVBoxLayout()
+        right_container = QWidget()
+        right_container.setStyleSheet("background-color: #ffffff; border-radius: 6px;")
+        right = QVBoxLayout(right_container)
+        right.setContentsMargins(15, 15, 15, 15)
         right.setSpacing(12)
         
         list_header = QLabel("<b style='font-size: 13px;'>Questions List</b>")
@@ -291,8 +335,10 @@ class TeacherWindow(QMainWindow):
         reset_exam_btn.clicked.connect(self.reset_full_exam)
         right.addWidget(reset_exam_btn)
 
-        main_layout.addLayout(right, 1)
-        self.central.addWidget(page)
+        main_layout.addWidget(right_container, 1)
+        outer_layout.addLayout(main_layout)
+        self.stack.addWidget(page)
+        self.stack.setCurrentWidget(page)
 
     # ================= VALIDATION & LOGIC =================
 
@@ -435,7 +481,33 @@ class TeacherWindow(QMainWindow):
 # ===================== 4. ENHANCED LOGS VIEWER =====================
     def setup_logs(self):
         page = QWidget()
-        layout = QVBoxLayout(page)
+        page.setStyleSheet("background-color: #F8DD70;")
+        outer_layout = QVBoxLayout(page)
+        outer_layout.setContentsMargins(20, 20, 20, 20)
+        outer_layout.setSpacing(15)
+        
+        # Header row with back button
+        header_row = QWidget()
+        header_row.setStyleSheet("background-color: #F8DD70;")
+        header_layout = QHBoxLayout(header_row)
+        back_btn = QPushButton("← Back")
+        back_btn.setFixedSize(90, 34)
+        back_btn.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
+        back_btn.clicked.connect(self.return_to_teacher_menu)
+        header_layout.addWidget(back_btn)
+        header_layout.addStretch()
+        title = QLabel("View Exam Logs")
+        title.setStyleSheet("font-size: 22px; font-weight: bold; color: #0B2C5D; background-color: #F8DD70;")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(title)
+        header_layout.addStretch()
+        placeholder = QWidget()
+        placeholder.setFixedSize(90, 34)
+        header_layout.addWidget(placeholder)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.addWidget(header_row)
+        
+        layout = QVBoxLayout()
         
         # 4.1 Filter Header
         filter_row = QHBoxLayout()
@@ -492,11 +564,13 @@ class TeacherWindow(QMainWindow):
         btn_frame.addWidget(refresh_btn)
         
         back_btn = AnimatedBubbleButton("Back", color="#E7F0FE", text_col=NU_BLUE, radius=0, animate=False)
-        back_btn.clicked.connect(self.close)
+        back_btn.clicked.connect(self.return_to_teacher_menu)
         btn_frame.addWidget(back_btn)
         
         layout.addLayout(btn_frame)
-        self.central.addWidget(page)
+        outer_layout.addLayout(layout)
+        self.stack.addWidget(page)
+        self.stack.setCurrentWidget(page)
         self.init_log_filters()
 
     def init_log_filters(self):
@@ -587,7 +661,34 @@ class TeacherWindow(QMainWindow):
         
     # ===================== 5. CREATE CLASS (FIXED) =====================
     def setup_create_class(self):
-        page = QWidget(); layout = QVBoxLayout(page)
+        page = QWidget()
+        page.setStyleSheet("background-color: #F8DD70;")
+        outer_layout = QVBoxLayout(page)
+        outer_layout.setContentsMargins(20, 20, 20, 20)
+        outer_layout.setSpacing(15)
+        
+        # Header row with back button
+        header_row = QWidget()
+        header_row.setStyleSheet("background-color: #F8DD70;")
+        header_layout = QHBoxLayout(header_row)
+        back_btn = QPushButton("← Back")
+        back_btn.setFixedSize(90, 34)
+        back_btn.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
+        back_btn.clicked.connect(self.return_to_teacher_menu)
+        header_layout.addWidget(back_btn)
+        header_layout.addStretch()
+        title = QLabel("Create New Class")
+        title.setStyleSheet("font-size: 22px; font-weight: bold; color: #0B2C5D; background-color: #F8DD70;")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(title)
+        header_layout.addStretch()
+        placeholder = QWidget()
+        placeholder.setFixedSize(90, 34)
+        header_layout.addWidget(placeholder)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.addWidget(header_row)
+        
+        layout = QVBoxLayout()
         layout.addWidget(QLabel("<b>CREATE NEW CLASS</b>", alignment=Qt.AlignmentFlag.AlignCenter))
         
         layout.addWidget(QLabel("Class Name:"))
@@ -603,10 +704,9 @@ class TeacherWindow(QMainWindow):
         save_btn.clicked.connect(self.save_new_class)
         layout.addWidget(save_btn)
 
-        back_btn = AnimatedBubbleButton("Back", color="#E7F0FE", text_col=NU_BLUE, animate=False, radius=0)
-        back_btn.clicked.connect(self.close)
-        layout.addWidget(back_btn)
-        self.central.addWidget(page)
+        outer_layout.addLayout(layout)
+        self.stack.addWidget(page)
+        self.stack.setCurrentWidget(page)
 
     def save_new_class(self):
         name = self.new_class_name.text().strip()
@@ -671,7 +771,34 @@ class TeacherWindow(QMainWindow):
             
     # ===================== 6. MANAGE CLASS (FIXED) =====================
     def setup_manage_class(self):
-        page = QWidget(); layout = QVBoxLayout(page)
+        page = QWidget()
+        page.setStyleSheet("background-color: #F8DD70;")
+        outer_layout = QVBoxLayout(page)
+        outer_layout.setContentsMargins(20, 20, 20, 20)
+        outer_layout.setSpacing(15)
+        
+        # Header row with back button
+        header_row = QWidget()
+        header_row.setStyleSheet("background-color: #F8DD70;")
+        header_layout = QHBoxLayout(header_row)
+        back_btn = QPushButton("← Back")
+        back_btn.setFixedSize(90, 34)
+        back_btn.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
+        back_btn.clicked.connect(self.return_to_teacher_menu)
+        header_layout.addWidget(back_btn)
+        header_layout.addStretch()
+        title = QLabel("Manage Classes")
+        title.setStyleSheet("font-size: 22px; font-weight: bold; color: #0B2C5D; background-color: #F8DD70;")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(title)
+        header_layout.addStretch()
+        placeholder = QWidget()
+        placeholder.setFixedSize(90, 34)
+        header_layout.addWidget(placeholder)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.addWidget(header_row)
+        
+        layout = QVBoxLayout()
         
         # Class Selection Header
         top_row = QHBoxLayout()
@@ -708,11 +835,9 @@ class TeacherWindow(QMainWindow):
         btn_row.addWidget(add_s_btn); btn_row.addWidget(assign_e_btn); btn_row.addWidget(del_c_btn)
         layout.addLayout(btn_row)
 
-        back_btn = AnimatedBubbleButton("Back", color="#E7F0FE", text_col=NU_BLUE, animate=False, radius=0)
-        back_btn.clicked.connect(self.close)
-        layout.addWidget(back_btn)
-        
-        self.central.addWidget(page)
+        outer_layout.addLayout(layout)
+        self.stack.addWidget(page)
+        self.stack.setCurrentWidget(page)
         self.load_selected_class_data()
 
     def refresh_class_list(self):
@@ -839,6 +964,19 @@ class TeacherWindow(QMainWindow):
             os.remove(f"classes/{c_name}.json")
             self.refresh_class_list()
             self.load_selected_class_data()
+
+    def return_to_teacher_menu(self):
+        """Return to main portal and show the teacher menu page"""
+        self.hide()
+        try:
+            self.portal.t_win = None
+            self.portal.show_teacher_page()
+            self.portal.show()
+        except Exception:
+            try:
+                self.portal.show()
+            except Exception:
+                pass
 
     def closeEvent(self, event):
         self.portal.show()
