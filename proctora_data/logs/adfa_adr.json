@@ -1,0 +1,10 @@
+{
+    "type": "SUBMIT_LOG",
+    "exam_name": "adfa",
+    "student_name": "adr",
+    "classname": "beta",
+    "score": 0,
+    "detections": [],
+    "duration_taken_sec": 2.635333,
+    "finished_at": "2026-02-11 01:06:23"
+}

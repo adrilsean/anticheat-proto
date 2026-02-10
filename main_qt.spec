@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='main_qt',
+    name='proctora',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -36,4 +36,13 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=['logo.png'],
+)
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='proctora'
 )

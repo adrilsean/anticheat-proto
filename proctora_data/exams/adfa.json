@@ -1,0 +1,17 @@
+{
+    "exam_name": "adfa",
+    "questions": [
+        {
+            "question": "fdaf",
+            "type": "text",
+            "answer_text": "fdaf"
+        }
+    ],
+    "settings": {
+        "shuffle": false,
+        "duration": null,
+        "duration_enabled": false,
+        "show_detections": true,
+        "show_score": true
+    }
+}

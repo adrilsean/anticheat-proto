@@ -5,9 +5,10 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLa
                              QLineEdit, QPushButton, QStackedWidget, QListWidget, 
                              QGroupBox, QRadioButton, QButtonGroup, QCheckBox, 
                              QSpinBox, QTextEdit, QComboBox, QTreeWidget, 
-                             QTreeWidgetItem, QMessageBox, QFrame, QDialog, QApplication, QGridLayout, QTableWidget, QTableWidgetItem, QMenu)
+                             QTreeWidgetItem, QMessageBox, QFrame, QDialog, QApplication, QGridLayout, QTableWidget, QTableWidgetItem, QMenu, QGraphicsDropShadowEffect, QScrollArea)
 from PyQt6.QtCore import Qt, QPropertyAnimation, QRect, QEasingCurve
 from PyQt6.QtGui import QPixmap, QColor, QFont
+from PyQt6.QtWidgets import QGraphicsDropShadowEffect
 
 NU_BLUE = "#0B2C5D"
 NU_HOVER = "#154c9e"
@@ -119,6 +120,19 @@ class AnimatedBubbleButton(QPushButton):
         self.text_col = text_col
         self.animate = animate
         self.orig_geo = None
+        
+        # Add shadow effect for floating appearance
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(8)
+        shadow.setXOffset(0)
+        shadow.setYOffset(3)
+        shadow.setColor(QColor(0, 0, 0, 80))
+        self.setGraphicsEffect(shadow)
+        
+        # Set font to bold
+        font = QFont("Poppins", 15, QFont.Weight.Bold)
+        self.setFont(font)
+        
         self.setStyleSheet(self._get_style(self.default_color))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self._animation = QPropertyAnimation(self, b"geometry")
@@ -140,6 +154,73 @@ class AnimatedBubbleButton(QPushButton):
         if self.animate and self.orig_geo:
             self._animation.setEndValue(self.orig_geo)
             self._animation.start()
+
+class IconSquareButton(QPushButton):
+    """Square button with large icon on top and small text below for the teacher menu"""
+    def __init__(self, text, icon_char="📋", parent=None, color=NU_BLUE, text_color="white", size=120):
+        super().__init__(parent)
+        self.default_color = color
+        self.hover_color = NU_HOVER if color == NU_BLUE else "#c5d9f7"
+        self.text_color = text_color
+        self.size = size
+        
+        # Set fixed square size
+        self.setFixedSize(size, size)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        # Add shadow effect for floating appearance
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(10)
+        shadow.setXOffset(0)
+        shadow.setYOffset(2)
+        shadow.setColor(QColor(0, 0, 0, 100))
+        self.setGraphicsEffect(shadow)
+        
+        # Create a layout for the button content with separate icon and text
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(1)
+        
+        # Icon label (large - 32px)
+        icon_label = QLabel(icon_char)
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_font = QFont("Poppins", 40)
+        icon_label.setFont(icon_font)
+        icon_label.setStyleSheet(f"color: {self.text_color}; background: transparent; border: none;")
+        layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        
+        # Text label (small - 8px) - NOW BOLD
+        text_label = QLabel(text)
+        text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        text_font = QFont("Poppins", 12)
+        text_font.setBold(True)
+        text_label.setFont(text_font)
+        text_label.setStyleSheet(f"color: {self.text_color}; background: transparent; border: none;")
+        text_label.setWordWrap(True)
+        layout.addWidget(text_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        
+        self._update_style(self.default_color)
+    
+    def _update_style(self, bg_color):
+        """Update button style"""
+        style = f"""
+            QPushButton {{
+                background-color: {bg_color};
+                border: none;
+                border-radius: 6px;
+                padding: 2px;
+            }}
+            QPushButton:hover {{
+                background-color: {self.hover_color};
+            }}
+        """
+        self.setStyleSheet(style)
+    
+    def enterEvent(self, event):
+        self._update_style(self.hover_color)
+    
+    def leaveEvent(self, event):
+        self._update_style(self.default_color)
 
 class TeacherWindow(QWidget):
     def __init__(self, page_key, portal):
@@ -369,10 +450,6 @@ class TeacherWindow(QWidget):
         final_save.clicked.connect(self.save_entire_exam)
         right.addWidget(final_save)
         
-        reset_exam_btn = AnimatedBubbleButton("Reset Full Exam", color="#dc3545", animate=False, radius=8)
-        reset_exam_btn.setMinimumHeight(42)
-        reset_exam_btn.clicked.connect(self.reset_full_exam)
-        right.addWidget(reset_exam_btn)
 
         main_layout.addWidget(right_container, 1)
         outer_layout.addLayout(main_layout)
@@ -583,6 +660,8 @@ class TeacherWindow(QWidget):
         
         # Use Monospace font for perfect status alignment
         self.log_tree.itemClicked.connect(self.display_log_details)
+        self.log_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.log_tree.customContextMenuRequested.connect(self.on_log_tree_context_menu)
         content_split.addWidget(self.log_tree)
         
         self.log_detail = QTextEdit()
@@ -683,6 +762,7 @@ class TeacherWindow(QWidget):
         QMessageBox.information(self, "Excel Copy", "Scores column copied to clipboard!")
 
     def display_log_details(self, item):
+        self.selected_log_item = item  # Track the selected item for deletion
         d = item.data(0, Qt.ItemDataRole.UserRole)
         if not d:
             self.log_detail.setHtml("<h3 style='color:gray;'>No data submitted yet.</h3>")
@@ -698,6 +778,79 @@ class TeacherWindow(QWidget):
             html += f"<font color='red'>[{det.get('timestamp_relative_sec')}s] {det.get('event')}</font><br/>"
             
         self.log_detail.setHtml(html)
+        
+    def on_log_tree_context_menu(self, position):
+        """Show context menu for log tree right-click"""
+        item = self.log_tree.itemAt(position)
+        if item is None:
+            return
+        
+        # Check if this item has log data (no data means pending exam)
+        log_data = item.data(0, Qt.ItemDataRole.UserRole)
+        if not log_data:
+            QMessageBox.information(self, "No Attempt", "This student has not attempted the exam yet.")
+            return
+        
+        # Create context menu with proper styling
+        context_menu = QMenu(self)
+        context_menu.setStyleSheet("QMenu { color: #000000; background-color: #ffffff; } QMenu::item:selected { background-color: #0B2C5D; color: #ffffff; }")
+        delete_action = context_menu.addAction("🗑️ Delete This Attempt")
+        
+        # Show menu and handle selection
+        action = context_menu.exec(self.log_tree.mapToGlobal(position))
+        if action == delete_action:
+            self.delete_exam_attempt(item)
+
+    def delete_exam_attempt(self, item):
+        """Delete the exam attempt for a student"""
+        student_name = item.text(1)  # Column 1 is Student name
+        exam_name = self.log_exam_filter.currentText()
+        
+        # Confirm deletion
+        confirm = QMessageBox.question(
+            self, 
+            "Delete Exam Attempt", 
+            f"Are you sure you want to delete the exam attempt for {student_name}?\n\nThis action cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+        
+        try:
+            # Remove the log file
+            log_path = os.path.join(get_data_path("logs"), f"{exam_name}_{student_name}.json")
+            if os.path.exists(log_path):
+                os.remove(log_path)
+            
+            # Also remove from class data if it exists
+            class_name = self.log_class_filter.currentText()
+            class_path = os.path.join(get_data_path("classes"), f"{class_name}.json")
+            if os.path.exists(class_path):
+                with open(class_path, "r", encoding="utf-8") as f:
+                    class_data = json.load(f)
+                
+                # Find and update the student's exam status
+                for student in class_data.get("students", []):
+                    if student["name"] == student_name:
+                        if "exam_statuses" in student:
+                            if exam_name in student["exam_statuses"]:
+                                student["exam_statuses"][exam_name] = "pending"
+                        break
+                
+                # Save updated class data
+                with open(class_path, "w", encoding="utf-8") as f:
+                    json.dump(class_data, f, indent=2, ensure_ascii=False)
+            
+            # Refresh the log tree
+            self.refresh_log_tree()
+            self.log_detail.clear()
+            
+            QMessageBox.information(self, "Success", f"Exam attempt for {student_name} has been deleted.")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to delete exam attempt:\n{str(e)}")
+        
         
     # ===================== 5. CREATE CLASS (FIXED) =====================
     def setup_create_class(self):
@@ -879,7 +1032,11 @@ class TeacherWindow(QWidget):
         header_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.addWidget(header_row)
         
-        layout = QVBoxLayout()
+        # Main content layout - Left (2 columns) and Right (1 column)
+        main_content = QHBoxLayout()
+        
+        # ===== LEFT SIDE: Class Selection, Students, Assigned Exams =====
+        left_container = QVBoxLayout()
         
         # Class Selection Header
         top_row = QHBoxLayout()
@@ -889,42 +1046,72 @@ class TeacherWindow(QWidget):
         self.refresh_class_list()
         self.class_picker.currentTextChanged.connect(self.load_selected_class_data)
         top_row.addWidget(self.class_picker, 1)
-        layout.addLayout(top_row)
+        left_container.addLayout(top_row)
 
-        # Lists Display
+        # Lists Display (2 columns)
         lists_layout = QHBoxLayout()
         
-        # Students List
+        # Students List (Table with Name and Password columns) - BIGGEST
         s_lay = QVBoxLayout(); s_lay.addWidget(QLabel("Students:"))
-        self.manage_student_list = QListWidget()
+        self.manage_student_list = QTableWidget()
+        self.manage_student_list.setColumnCount(2)
+        self.manage_student_list.setHorizontalHeaderLabels(["Name", "Password"])
         self.manage_student_list.setStyleSheet("background-color: #ffffff; border-radius: 4px;")
+        self.manage_student_list.horizontalHeader().setStretchLastSection(True)
+        self.manage_student_list.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.manage_student_list.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         s_lay.addWidget(self.manage_student_list)
-        lists_layout.addLayout(s_lay)
+        lists_layout.addLayout(s_lay, 2)
 
-        # Exams List
+        # Assigned Exams List - SAME WIDTH AS AVAILABLE
         e_lay = QVBoxLayout(); e_lay.addWidget(QLabel("Assigned Exams:"))
-        self.manage_exam_list = QListWidget()
-        self.manage_exam_list.setStyleSheet("background-color: #ffffff; border-radius: 4px;")
-        self.manage_exam_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.manage_exam_list.customContextMenuRequested.connect(self.show_exam_context_menu)
-        e_lay.addWidget(self.manage_exam_list)
-        lists_layout.addLayout(e_lay)
+        self.manage_exam_container = QWidget()
+        self.manage_exam_layout = QVBoxLayout(self.manage_exam_container)
+        self.manage_exam_layout.setContentsMargins(0, 0, 0, 0)
+        self.manage_exam_layout.setSpacing(4)
         
-        layout.addLayout(lists_layout)
-
-        # Management Buttons
+        exam_scroll_area = QScrollArea()
+        exam_scroll_area.setWidget(self.manage_exam_container)
+        exam_scroll_area.setWidgetResizable(True)
+        exam_scroll_area.setStyleSheet("background-color: #ffffff; border-radius: 4px;")
+        e_lay.addWidget(exam_scroll_area)
+        lists_layout.addLayout(e_lay, 1)
+        
+        left_container.addLayout(lists_layout)
+        
+        # Management Buttons (only for left-side actions: Add Students, Delete Class)
         btn_row = QHBoxLayout()
         add_s_btn = AnimatedBubbleButton("Add Students", radius=8, animate=False); add_s_btn.clicked.connect(self.popup_add_students)
         add_s_btn.setMinimumHeight(42)
-        assign_e_btn = AnimatedBubbleButton("Assign Exam", radius=8, animate=False); assign_e_btn.clicked.connect(self.popup_assign_exam)
-        assign_e_btn.setMinimumHeight(42)
         del_c_btn = AnimatedBubbleButton("Delete Class", color="#dc3545", radius=8, animate=False); del_c_btn.clicked.connect(self.delete_current_class)
         del_c_btn.setMinimumHeight(42)
         
-        btn_row.addWidget(add_s_btn); btn_row.addWidget(assign_e_btn); btn_row.addWidget(del_c_btn)
-        layout.addLayout(btn_row)
-
-        outer_layout.addLayout(layout)
+        btn_row.addWidget(add_s_btn); btn_row.addWidget(del_c_btn)
+        left_container.addLayout(btn_row)
+        
+        main_content.addLayout(left_container, 3)
+        
+        # ===== RIGHT SIDE: Available Exams with Assign Buttons - SAME WIDTH AS ASSIGNED =====
+        a_lay = QVBoxLayout()
+        avail_label = QLabel("Available Exams:")
+        avail_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #0B2C5D;")
+        a_lay.addWidget(avail_label)
+        self.available_exams_container = QWidget()
+        self.available_exams_layout = QVBoxLayout(self.available_exams_container)
+        self.available_exams_layout.setContentsMargins(0, 0, 0, 0)
+        self.available_exams_layout.setSpacing(6)
+        
+        scroll_area = QScrollArea()
+        scroll_area.setWidget(self.available_exams_container)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setStyleSheet("background-color: #ffffff; border-radius: 4px;")
+        a_lay.addWidget(scroll_area)
+        main_content.addLayout(a_lay, 1)
+        
+        outer_layout.addLayout(main_content)
+        
+        # Populate available exams on first load
+        self.refresh_available_exams()
         self.stack.addWidget(page)
         self.stack.setCurrentWidget(page)
         self.load_selected_class_data()
@@ -944,16 +1131,58 @@ class TeacherWindow(QWidget):
     def load_selected_class_data(self):
         c_name = self.class_picker.currentText()
         path = os.path.join(get_data_path("classes"), f"{c_name}.json")
-        self.manage_student_list.clear()
-        self.manage_exam_list.clear()
+        self.manage_student_list.setRowCount(0)
+        
+        # Clear assigned exams layout
+        while self.manage_exam_layout.count():
+            item = self.manage_exam_layout.takeAt(0)
+            if item and item.widget():
+                item.widget().deleteLater()
         
         if os.path.exists(path):
             with open(path, "r") as f:
                 self.current_class_data = json.load(f)
-                for s in self.current_class_data.get("students", []):
-                    self.manage_student_list.addItem(s["name"])
+                students = self.current_class_data.get("students", [])
+                self.manage_student_list.setRowCount(len(students))
+                for row, s in enumerate(students):
+                    name_item = QTableWidgetItem(s["name"])
+                    password_item = QTableWidgetItem(s.get("password", "N/A"))
+                    self.manage_student_list.setItem(row, 0, name_item)
+                    self.manage_student_list.setItem(row, 1, password_item)
+                
                 for e in self.current_class_data.get("exams", []):
-                    self.manage_exam_list.addItem(e)
+                    self.add_assigned_exam_row(e)
+        
+        # Add stretch to push items to top
+        self.manage_exam_layout.addStretch()
+        
+        # Refresh the available exams list
+        self.refresh_available_exams()
+    
+    def add_assigned_exam_row(self, exam_name):
+        """Add an assigned exam with a delete button"""
+        exam_row = QHBoxLayout()
+        exam_row.setContentsMargins(6, 4, 6, 4)
+        exam_row.setSpacing(8)
+        
+        # Exam name label
+        exam_label = QLabel(exam_name)
+        exam_label.setStyleSheet("color: #0B2C5D; font-weight: 500;")
+        exam_row.addWidget(exam_label, 1)
+        
+        # Delete button (X)
+        del_btn = AnimatedBubbleButton("✕", color="#dc3545", radius=6, animate=False)
+        del_btn.setFixedSize(32, 28)
+        del_btn.setToolTip(f"Delete exam '{exam_name}' from class")
+        del_btn.clicked.connect(lambda checked, e=exam_name: self.unassign_exam(e))
+        exam_row.addWidget(del_btn)
+        
+        # Create a container widget for the row
+        row_widget = QWidget()
+        row_widget.setLayout(exam_row)
+        row_widget.setStyleSheet("background-color: #f0f0f0; border-radius: 4px; padding: 2px;")
+        
+        self.manage_exam_layout.addWidget(row_widget)
 
     def popup_add_students(self):
             dialog = QDialog(self)
@@ -1061,18 +1290,7 @@ class TeacherWindow(QWidget):
             self.refresh_class_list()
             self.load_selected_class_data()
 
-    def show_exam_context_menu(self, position):
-        """Display right-click context menu for exam list"""
-        item = self.manage_exam_list.itemAt(position)
-        if not item:
-            return
-        
-        context_menu = QMenu(self)
-        context_menu.setStyleSheet("QMenu { color: #000000; background-color: #ffffff; border: 1px solid #cccccc; } QMenu::item { color: #000000; } QMenu::item:selected { background-color: #e8f5e9; }")
-        unassign_action = context_menu.addAction("Unassign Exam")
-        unassign_action.triggered.connect(lambda: self.unassign_exam(item.text()))
-        
-        context_menu.exec(self.manage_exam_list.mapToGlobal(position))
+
 
     def unassign_exam(self, exam_name):
         """Remove an exam from the class"""
@@ -1089,6 +1307,101 @@ class TeacherWindow(QWidget):
                     self.load_selected_class_data()
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to unassign exam: {str(e)}")
+
+    def refresh_available_exams(self):
+        """Load all available exams and display them with assign buttons"""
+        # Clear the layout
+        while self.available_exams_layout.count():
+            item = self.available_exams_layout.takeAt(0)
+            if item and item.widget():
+                item.widget().deleteLater()
+        
+        # Get all exams from the exams folder
+        if not os.path.exists(get_data_path("exams")):
+            os.makedirs(get_data_path("exams"), exist_ok=True)
+        
+        exams = sorted([f[:-5] for f in os.listdir(get_data_path("exams")) if f.endswith(".json")])
+        
+        if not exams:
+            no_exams_label = QLabel("No exams available")
+            no_exams_label.setStyleSheet("color: #999999; font-style: italic;")
+            self.available_exams_layout.addWidget(no_exams_label)
+        else:
+            for exam_name in exams:
+                # Create a horizontal layout for each exam row
+                exam_row = QHBoxLayout()
+                exam_row.setContentsMargins(6, 4, 6, 4)
+                exam_row.setSpacing(6)
+                
+                # Exam name label
+                exam_label = QLabel(exam_name)
+                exam_label.setStyleSheet("color: #0B2C5D; font-weight: 500;")
+                exam_row.addWidget(exam_label, 1)
+                
+                # Assign button (simple +)
+                assign_btn = AnimatedBubbleButton("+", color="#28a745", radius=6, animate=False)
+                assign_btn.setFixedSize(36, 28)
+                assign_btn.setToolTip(f"Assign exam '{exam_name}' to class")
+                assign_btn.clicked.connect(lambda checked, e=exam_name: self.assign_exam_from_available(e))
+                exam_row.addWidget(assign_btn)
+                
+                # Delete button
+                del_btn = AnimatedBubbleButton("🗑", color="#dc3545", radius=6, animate=False)
+                del_btn.setFixedSize(36, 28)
+                del_btn.setToolTip(f"Delete exam '{exam_name}'")
+                del_btn.clicked.connect(lambda checked, e=exam_name: self.delete_exam(e))
+                exam_row.addWidget(del_btn)
+                
+                # Create a container widget for the row
+                row_widget = QWidget()
+                row_widget.setLayout(exam_row)
+                row_widget.setStyleSheet("background-color: #f0f0f0; border-radius: 4px; padding: 2px;")
+                
+                self.available_exams_layout.addWidget(row_widget)
+        
+        # Add stretch at the bottom to push items to the top
+        self.available_exams_layout.addStretch()
+
+    def assign_exam_from_available(self, exam_name):
+        """Assign an exam to the current class"""
+        class_name = self.class_picker.currentText()
+        if class_name == "No classes found":
+            QMessageBox.warning(self, "Error", "Please select a valid class first.")
+            return
+        
+        if exam_name in self.current_class_data.get("exams", []):
+            QMessageBox.information(self, "Info", f"Exam '{exam_name}' is already assigned to this class.")
+            return
+        
+        try:
+            self.current_class_data.setdefault("exams", []).append(exam_name)
+            with open(os.path.join(get_data_path("classes"), f"{class_name}.json"), "w", encoding="utf-8") as f:
+                json.dump(self.current_class_data, f, indent=4, ensure_ascii=False)
+            QMessageBox.information(self, "Success", f"Exam '{exam_name}' assigned successfully!")
+            self.load_selected_class_data()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to assign exam: {str(e)}")
+
+    def delete_exam(self, exam_name):
+        """Delete an exam file permanently"""
+        ans = QMessageBox.question(
+            self, 
+            "Confirm Delete", 
+            f"Are you sure you want to permanently delete the exam '{exam_name}'?\n\nThis action cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if ans == QMessageBox.StandardButton.Yes:
+            try:
+                exam_path = os.path.join(get_data_path("exams"), f"{exam_name}.json")
+                if os.path.exists(exam_path):
+                    os.remove(exam_path)
+                    QMessageBox.information(self, "Success", f"Exam '{exam_name}' deleted successfully!")
+                    self.refresh_available_exams()
+                    # Also refresh the assign exam dialog if it's open
+                    self.load_selected_class_data()
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to delete exam: {str(e)}")
 
     def return_to_teacher_menu(self):
         """Return to main portal and show the teacher menu page"""

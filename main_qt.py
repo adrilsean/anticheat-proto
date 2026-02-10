@@ -8,7 +8,7 @@ from PyQt6.QtGui import QPixmap,  QFontDatabase, QIcon
 import network_logic
 import teacher_qt as teacher
 import student_qt as student
-from teacher_qt import AnimatedBubbleButton, NU_BLUE
+from teacher_qt import AnimatedBubbleButton, IconSquareButton, NU_BLUE
 
 
 def get_asset_path(filename):
@@ -226,17 +226,17 @@ class AntiCheatPortal(QMainWindow):
         self.teacher_title.setStyleSheet("font-size: 28px; font-weight: bold; color: #0B2C5D;")
         self.teacher_title.show()
 
-        # 3.1 MENU OPTIONS (Existing code continues)
-        options = [
-            ("GENERATE EXAM", 195, "exam"),
-            ("VIEW EXAM LOGS", 265, "logs"),
-            ("CREATE NEW CLASS", 335, "create_class"),
-            ("MANAGE CLASSES", 405, "manage_class")
+        # 3.1 MENU OPTIONS with Icon Square Buttons (1 Row, 4 Columns - Compact Professional)
+        menu_options = [
+            ("Generate\nExam", "📝", 130, 240, "exam"),
+            ("View Exam\nLogs", "📊", 300, 240, "logs"),
+            ("Create New\nClass", "👥", 470, 240, "create_class"),
+            ("Manage\nClasses", "⚙️", 640, 240, "manage_class")
         ]
 
-        for text, y, key in options:
-            btn = AnimatedBubbleButton(text.title(), self, radius=8, animate=False)
-            btn.setGeometry(306, y, 288, 44)
+        for text, icon, x, y, key in menu_options:
+            btn = IconSquareButton(text, icon_char=icon, parent=self, color="#ffffff", text_color="#0B2C5D", size=130)
+            btn.setGeometry(x, y, 130, 130)
             btn.clicked.connect(lambda ch, k=key: self.launch_teacher(k))
             btn.show()
 

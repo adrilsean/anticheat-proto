@@ -1,0 +1,25 @@
+{
+  "classname": "beta",
+  "students": [
+    {
+      "name": "adr",
+      "password": "123"
+    },
+    {
+      "name": "sean",
+      "password": "123"
+    },
+    {
+      "name": "adril",
+      "password": "bart"
+    },
+    {
+      "name": "kumalala",
+      "password": "321"
+    }
+  ],
+  "exams": [
+    "adfa",
+    "exx"
+  ]
+}

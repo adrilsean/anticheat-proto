@@ -1,0 +1,51 @@
+{
+    "type": "SUBMIT_LOG",
+    "exam_name": "exx",
+    "student_name": "adr",
+    "classname": "beta",
+    "score": 2,
+    "detections": [
+        {
+            "timestamp_relative_sec": 4,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 4,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 4,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 4,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 4,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 4,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 4,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 4,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 4,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 14,
+            "event": "Paste action detected"
+        }
+    ],
+    "duration_taken_sec": 15.561238,
+    "finished_at": "2026-02-11 01:06:44"
+}

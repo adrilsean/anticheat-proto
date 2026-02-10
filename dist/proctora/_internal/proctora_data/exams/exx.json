@@ -1,0 +1,49 @@
+{
+    "exam_name": "exx",
+    "questions": [
+        {
+            "question": "1231",
+            "type": "text",
+            "answer_text": "123123"
+        },
+        {
+            "question": "fff",
+            "type": "tf",
+            "correct_tf": false
+        },
+        {
+            "question": "a",
+            "type": "mcq",
+            "options": [
+                "a",
+                "bc",
+                "c",
+                "d"
+            ],
+            "answer_index": 0
+        },
+        {
+            "question": "ss",
+            "type": "text",
+            "answer_text": "ss"
+        },
+        {
+            "question": "fda",
+            "type": "mcq",
+            "options": [
+                "fada",
+                "da",
+                "fda",
+                "fda"
+            ],
+            "answer_index": 2
+        }
+    ],
+    "settings": {
+        "shuffle": true,
+        "duration": null,
+        "duration_enabled": false,
+        "show_detections": true,
+        "show_score": true
+    }
+}
