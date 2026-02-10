@@ -1,0 +1,23 @@
+{
+    "exam_name": "exam",
+    "questions": [
+        {
+            "question": "ge",
+            "type": "mcq",
+            "options": [
+                "321",
+                "32",
+                "32",
+                "1"
+            ],
+            "answer_index": 3
+        }
+    ],
+    "settings": {
+        "shuffle": false,
+        "duration": null,
+        "duration_enabled": false,
+        "show_detections": true,
+        "show_score": true
+    }
+}

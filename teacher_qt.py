@@ -1,22 +1,33 @@
 import json
 import os
+import sys
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QLineEdit, QPushButton, QStackedWidget, QListWidget, 
                              QGroupBox, QRadioButton, QButtonGroup, QCheckBox, 
                              QSpinBox, QTextEdit, QComboBox, QTreeWidget, 
-                             QTreeWidgetItem, QMessageBox, QFrame, QDialog, QApplication, QGridLayout)
+                             QTreeWidgetItem, QMessageBox, QFrame, QDialog, QApplication, QGridLayout, QTableWidget, QTableWidgetItem, QMenu)
 from PyQt6.QtCore import Qt, QPropertyAnimation, QRect, QEasingCurve
 from PyQt6.QtGui import QPixmap, QColor, QFont
 
 NU_BLUE = "#0B2C5D"
 NU_HOVER = "#154c9e"
 
+def get_data_path(subfolder):
+    """Get the correct path for data folders (exams, logs, classes) in proctora_data directory"""
+    if getattr(sys, 'frozen', False):
+        # Running as a PyInstaller bundle - use current working directory
+        base_path = os.getcwd()
+    else:
+        # Running from source - use script directory
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, 'proctora_data', subfolder)
+
 # Unified button appearance (colors may vary per-button)
 BUTTON_RADIUS = 8
 BUTTON_PADDING = "6px 12px"
 BUTTON_FONT_SIZE = 14
 def make_btn_style(bg_color, text_color="white"):
-    return f"background-color: {bg_color}; color: {text_color}; border-radius: {BUTTON_RADIUS}px; padding: {BUTTON_PADDING}; font-size: {BUTTON_FONT_SIZE}px; font-weight: bold; border: none;"
+    return f"background-color: {bg_color}; color: {text_color}; border-radius: {BUTTON_RADIUS}px; padding: {BUTTON_PADDING}; font-size: {BUTTON_FONT_SIZE}px; font-weight: bold; border: none; font-family: Poppins;"
 
 import socket
 import network_logic
@@ -25,15 +36,26 @@ class RequestHandler(QThread):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
+        self.running = True
+        self.daemon = True
+
+    def stop(self):
+        """Stop the request handler thread"""
+        self.running = False
 
     def run(self):
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind(('0.0.0.0', network_logic.TCP_PORT))
         server.listen(5)
+        server.settimeout(1)  # Add timeout to allow checking the running flag
         
-        while True:
-            conn, addr = server.accept()
+        while self.running:
+            try:
+                conn, addr = server.accept()
+            except socket.timeout:
+                continue
+            
             try:
                 data = conn.recv(1024 * 50).decode('utf-8')
                 if not data: continue
@@ -42,9 +64,9 @@ class RequestHandler(QThread):
 
                 # 1. LOGIN: Scans all rosters
                 if req["type"] == "LOGIN":
-                    for filename in os.listdir("classes"):
+                    for filename in os.listdir(get_data_path("classes")):
                         if filename.endswith(".json"):
-                            with open(f"classes/{filename}", "r", encoding="utf-8") as f:
+                            with open(os.path.join(get_data_path("classes"), filename), "r", encoding="utf-8") as f:
                                 class_data = json.load(f)
                                 if any(s['name'] == req['name'] and s['password'] == req['password'] for s in class_data['students']):
                                     resp = {"status": "success", "classname": class_data["classname"]}
@@ -53,7 +75,7 @@ class RequestHandler(QThread):
 
                 # 2. GET EXAM LIST
                 elif req["type"] == "GET_EXAM_LIST":
-                    path = f"classes/{req['classname']}.json"
+                    path = os.path.join(get_data_path("classes"), f"{req['classname']}.json")
                     if os.path.exists(path):
                         with open(path, "r", encoding="utf-8") as f:
                             resp = {"status": "success", "exams": json.load(f).get("exams", [])}
@@ -61,23 +83,23 @@ class RequestHandler(QThread):
                 # 3. CHECK TAKEN: Verification logic
                 elif req["type"] == "CHECK_TAKEN":
                     filename = f"{req['exam_name']}_{req['student_name']}.json"
-                    if os.path.exists(f"logs/{filename}"):
+                    if os.path.exists(os.path.join(get_data_path("logs"), filename)):
                         resp = {"status": "success", "taken": True}
                     else:
                         resp = {"status": "success", "taken": False}
 
                 # 4. GET EXAM: Download content
                 elif req["type"] == "GET_EXAM":
-                    path = f"exams/{req['exam_name']}.json"
+                    path = os.path.join(get_data_path("exams"), f"{req['exam_name']}.json")
                     if os.path.exists(path):
                         with open(path, "r", encoding="utf-8") as f:
                             resp = {"status": "success", "data": json.load(f)}
 
                 # 5. SUBMIT LOG: Save results
                 elif req["type"] == "SUBMIT_LOG":
-                    os.makedirs("logs", exist_ok=True)
+                    os.makedirs(get_data_path("logs"), exist_ok=True)
                     filename = f"{req['exam_name']}_{req['student_name']}.json"
-                    with open(f"logs/{filename}", "w", encoding="utf-8") as f:
+                    with open(os.path.join(get_data_path("logs"), filename), "w", encoding="utf-8") as f:
                         json.dump(req, f, indent=4)
                     resp = {"status": "success"}
 
@@ -85,6 +107,8 @@ class RequestHandler(QThread):
             except: pass
             finally:
                 conn.close()
+        
+        server.close()
             
 class AnimatedBubbleButton(QPushButton):
     def __init__(self, text, parent=None, color=NU_BLUE, radius=25, text_col="white", animate=True):
@@ -102,7 +126,7 @@ class AnimatedBubbleButton(QPushButton):
         self._animation.setEasingCurve(QEasingCurve.Type.OutQuad)
 
     def _get_style(self, bg_color):
-        return f"QPushButton {{ background-color: {bg_color}; color: {self.text_col}; border-radius: {self.radius}px; font-size: 15px; font-weight: bold; border: none; }}"
+        return f"QPushButton {{ background-color: {bg_color}; color: {self.text_col}; border-radius: {self.radius}px; font-size: 15px; font-weight: bold; border: none; font-family: Poppins; }}"
 
     def enterEvent(self, event):
         self.setStyleSheet(self._get_style(self.hover_color))
@@ -124,9 +148,9 @@ class TeacherWindow(QWidget):
         self.setFixedSize(900, 600)
         self.setGeometry(0, 0, 900, 600)
         
-        os.makedirs("exams", exist_ok=True)
-        os.makedirs("classes", exist_ok=True)
-        os.makedirs("logs", exist_ok=True)
+        os.makedirs(get_data_path("exams"), exist_ok=True)
+        os.makedirs(get_data_path("classes"), exist_ok=True)
+        os.makedirs(get_data_path("logs"), exist_ok=True)
 
         self.stack = QStackedWidget()
         main_layout = QVBoxLayout(self)
@@ -153,9 +177,8 @@ class TeacherWindow(QWidget):
         header_row = QWidget()
         header_row.setStyleSheet("background-color: #F8DD70;")
         header_layout = QHBoxLayout(header_row)
-        back_btn = QPushButton("← Back")
+        back_btn = AnimatedBubbleButton("← Back", radius=8, animate=False)
         back_btn.setFixedSize(90, 34)
-        back_btn.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
         back_btn.clicked.connect(self.return_to_teacher_menu)
         header_layout.addWidget(back_btn)
         header_layout.addStretch()
@@ -189,6 +212,7 @@ class TeacherWindow(QWidget):
         exam_row.addWidget(exam_label)
         self.ex_name_in = QLineEdit()
         self.ex_name_in.setPlaceholderText("e.g., Midterm Quiz 1")
+        self.ex_name_in.setStyleSheet("background-color: #ffffff; border: 1px solid #cccccc; border-radius: 4px; padding: 4px;")
         exam_row.addWidget(self.ex_name_in)
         left.addLayout(exam_row)
         left.addSpacing(10)
@@ -200,6 +224,7 @@ class TeacherWindow(QWidget):
         q_label = QLabel("<b style='font-size: 11px;'>Question Text</b>")
         left.addWidget(q_label)
         self.q_text_in = QLineEdit()
+        self.q_text_in.setStyleSheet("background-color: #ffffff; border: 1px solid #cccccc; border-radius: 4px; padding: 4px;")
         left.addWidget(self.q_text_in)
         left.addSpacing(10)
         
@@ -211,8 +236,7 @@ class TeacherWindow(QWidget):
         type_lay.setSpacing(15)
         for i, t in enumerate(["multiple choice", "text", "true or false"]):
             rb = QRadioButton(t.upper())
-            rb_font = rb.font()
-            rb_font.setPointSize(9)
+            rb_font = QFont("Poppins", 9)
             rb.setFont(rb_font)
             self.type_grp.addButton(rb, i)
             type_lay.addWidget(rb)
@@ -236,8 +260,8 @@ class TeacherWindow(QWidget):
             opt_hbox.setSpacing(8)
             rb = QRadioButton(); self.mcq_sel.addButton(rb, i)
             inp = QLineEdit(); inp.setPlaceholderText(f"Option {i+1}")
-            inp_font = inp.font()
-            inp_font.setPointSize(9)
+            inp.setStyleSheet("background-color: #ffffff; border: 1px solid #cccccc; border-radius: 4px; padding: 4px;")
+            inp_font = QFont("Poppins", 9)
             inp.setFont(inp_font)
             self.mcq_ins.append(inp)
             opt_hbox.addWidget(rb); opt_hbox.addWidget(inp)
@@ -248,6 +272,7 @@ class TeacherWindow(QWidget):
         # 2. TEXT UI
         txt_w = QWidget(); txt_l = QVBoxLayout(txt_w)
         self.txt_ans = QLineEdit(); self.txt_ans.setPlaceholderText("Type correct answer...")
+        self.txt_ans.setStyleSheet("background-color: #ffffff; border: 1px solid #cccccc; border-radius: 4px; padding: 4px;")
         txt_l.addWidget(self.txt_ans); txt_l.addStretch()
         self.ans_stack.addWidget(txt_w)
         
@@ -270,13 +295,13 @@ class TeacherWindow(QWidget):
         # ACTION BUTTONS (Stuck to Bottom) - Single Row (Clear left, Add right)
         btn_row = QHBoxLayout()
         btn_row.setSpacing(8)
-        clear_q_btn = AnimatedBubbleButton("Clear Current Fields", color="#6c757d", radius=0, animate=False)
-        clear_q_btn.setMinimumHeight(38)
+        clear_q_btn = AnimatedBubbleButton("Clear Current Fields", color="#6c757d", radius=8, animate=False)
+        clear_q_btn.setMinimumHeight(42)
         clear_q_btn.clicked.connect(self.clear_question_fields)
         btn_row.addWidget(clear_q_btn)
         
-        add_q_btn = AnimatedBubbleButton("Add / Update Question", color="#28a745", radius=0, animate=False)
-        add_q_btn.setMinimumHeight(38)
+        add_q_btn = AnimatedBubbleButton("Add / Update Question", color="#28a745", radius=8, animate=False)
+        add_q_btn.setMinimumHeight(42)
         add_q_btn.clicked.connect(self.save_question_to_list)
         btn_row.addWidget(add_q_btn)
         
@@ -294,6 +319,7 @@ class TeacherWindow(QWidget):
         list_header = QLabel("<b style='font-size: 13px;'>Questions List</b>")
         right.addWidget(list_header)
         self.q_list_disp = QListWidget()
+        self.q_list_disp.setStyleSheet("background-color: #ffffff; border-radius: 4px;")
         self.q_list_disp.itemDoubleClicked.connect(self.load_q_for_edit)
         # THE FIX: By default, QListWidget tries to expand. 
         # Adding it to the layout without a spacer below it allows it to stretch.
@@ -301,9 +327,22 @@ class TeacherWindow(QWidget):
         
         # SETTINGS GROUP (Compact)
         settings_box = QGroupBox("Exam Settings")
-        settings_box_font = settings_box.font()
+        settings_box.setStyleSheet("""
+            QGroupBox {
+                background-color: #ffffff;
+                border: 1px solid #cccccc;
+                border-radius: 4px;
+                margin-top: 8px;
+                padding-top: 8px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 3px 0 3px;
+            }
+        """)
+        settings_box_font = QFont("Poppins", 11)
         settings_box_font.setBold(True)
-        settings_box_font.setPointSize(11)
         settings_box.setFont(settings_box_font)
         set_lay = QVBoxLayout(settings_box)
         set_lay.setSpacing(8)
@@ -312,7 +351,7 @@ class TeacherWindow(QWidget):
         set_lay.addWidget(self.shuf_check)
         
         dur_h = QHBoxLayout()
-        self.dur_check = QCheckBox("Limit (mins):")
+        self.dur_check = QCheckBox("Time Limit (minutes):")
         self.dur_val = QSpinBox(); self.dur_val.setValue(60)
         dur_h.addWidget(self.dur_check); dur_h.addWidget(self.dur_val)
         set_lay.addLayout(dur_h)
@@ -325,13 +364,13 @@ class TeacherWindow(QWidget):
         right.addWidget(settings_box)
 
         # BUTTONS AT BOTTOM
-        final_save = AnimatedBubbleButton("Save Full Exam", animate=False, radius=0)
+        final_save = AnimatedBubbleButton("Save Full Exam", animate=False, radius=8)
         final_save.setMinimumHeight(42)
         final_save.clicked.connect(self.save_entire_exam)
         right.addWidget(final_save)
         
-        reset_exam_btn = AnimatedBubbleButton("Reset Full Exam", color="#dc3545", animate=False, radius=0)
-        reset_exam_btn.setMinimumHeight(38)
+        reset_exam_btn = AnimatedBubbleButton("Reset Full Exam", color="#dc3545", animate=False, radius=8)
+        reset_exam_btn.setMinimumHeight(42)
         reset_exam_btn.clicked.connect(self.reset_full_exam)
         right.addWidget(reset_exam_btn)
 
@@ -471,12 +510,12 @@ class TeacherWindow(QWidget):
             }
         }
         
-        os.makedirs("exams", exist_ok=True)
-        with open(f"exams/{name}.json", "w", encoding="utf-8") as f:
+        os.makedirs(get_data_path("exams"), exist_ok=True)
+        with open(os.path.join(get_data_path("exams"), f"{name}.json"), "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
             
         QMessageBox.information(self, "Success", f"Exam '{name}' Saved Successfully!")
-        self.close()
+        self.return_to_teacher_menu()
 
 # ===================== 4. ENHANCED LOGS VIEWER =====================
     def setup_logs(self):
@@ -490,9 +529,8 @@ class TeacherWindow(QWidget):
         header_row = QWidget()
         header_row.setStyleSheet("background-color: #F8DD70;")
         header_layout = QHBoxLayout(header_row)
-        back_btn = QPushButton("← Back")
+        back_btn = AnimatedBubbleButton("← Back", radius=8, animate=False)
         back_btn.setFixedSize(90, 34)
-        back_btn.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
         back_btn.clicked.connect(self.return_to_teacher_menu)
         header_layout.addWidget(back_btn)
         header_layout.addStretch()
@@ -513,12 +551,14 @@ class TeacherWindow(QWidget):
         filter_row = QHBoxLayout()
         filter_row.addWidget(QLabel("Class:"))
         self.log_class_filter = QComboBox()
+        self.log_class_filter.setStyleSheet("background-color: #ffffff; border-radius: 4px; padding: 2px;")
         # This connection was causing the error - ensure the method name matches exactly
         self.log_class_filter.currentTextChanged.connect(self.on_log_class_selected)
         filter_row.addWidget(self.log_class_filter, 1)
 
         filter_row.addWidget(QLabel("Exam:"))
         self.log_exam_filter = QComboBox()
+        self.log_exam_filter.setStyleSheet("background-color: #ffffff; border-radius: 4px; padding: 2px;")
         self.log_exam_filter.currentTextChanged.connect(self.refresh_log_tree)
         filter_row.addWidget(self.log_exam_filter, 1)
 
@@ -532,6 +572,7 @@ class TeacherWindow(QWidget):
         content_split = QHBoxLayout()
         
         self.log_tree = QTreeWidget()
+        self.log_tree.setStyleSheet("background-color: #ffffff; border-radius: 4px;")
         self.log_tree.setRootIsDecorated(False) # Hides the expansion arrow space
         self.log_tree.setIndentation(0)
         self.log_tree.setHeaderLabels(["Status", "Student", "Score"])
@@ -545,6 +586,7 @@ class TeacherWindow(QWidget):
         content_split.addWidget(self.log_tree)
         
         self.log_detail = QTextEdit()
+        self.log_detail.setStyleSheet("background-color: #ffffff; border-radius: 4px; padding: 4px;")
         self.log_detail.setReadOnly(True)
         self.log_detail.setPlaceholderText("Select a student to view report...")
         content_split.addWidget(self.log_detail)
@@ -555,17 +597,15 @@ class TeacherWindow(QWidget):
         btn_frame = QHBoxLayout()
         
         # Copy scores button for Excel
-        copy_btn = AnimatedBubbleButton("📋 Copy Scores For Excel", color="#28a745", radius=0, animate=False)
+        copy_btn = AnimatedBubbleButton("📋 Copy Scores For Excel", color="#28a745", radius=8, animate=False)
+        copy_btn.setMinimumHeight(42)
         copy_btn.clicked.connect(self.copy_scores_to_clipboard)
         btn_frame.addWidget(copy_btn)
 
-        refresh_btn = AnimatedBubbleButton("Refresh List", color=NU_BLUE, radius=0, animate=False)
+        refresh_btn = AnimatedBubbleButton("Refresh List", color=NU_BLUE, radius=8, animate=False)
+        refresh_btn.setMinimumHeight(42)
         refresh_btn.clicked.connect(self.init_log_filters)
         btn_frame.addWidget(refresh_btn)
-        
-        back_btn = AnimatedBubbleButton("Back", color="#E7F0FE", text_col=NU_BLUE, radius=0, animate=False)
-        back_btn.clicked.connect(self.return_to_teacher_menu)
-        btn_frame.addWidget(back_btn)
         
         layout.addLayout(btn_frame)
         outer_layout.addLayout(layout)
@@ -576,15 +616,15 @@ class TeacherWindow(QWidget):
     def init_log_filters(self):
         """Initializes the class filter dropdown"""
         self.log_class_filter.clear()
-        if not os.path.exists("classes"): return
-        classes = [f[:-5] for f in os.listdir("classes") if f.endswith(".json")]
+        if not os.path.exists(get_data_path("classes")): return
+        classes = [f[:-5] for f in os.listdir(get_data_path("classes")) if f.endswith(".json")]
         if classes:
             self.log_class_filter.addItems(sorted(classes))
 
     def on_log_class_selected(self, class_name):
         """Updates the exam filter when a class is chosen"""
         self.log_exam_filter.clear()
-        path = f"classes/{class_name}.json"
+        path = os.path.join(get_data_path("classes"), f"{class_name}.json")
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -599,13 +639,13 @@ class TeacherWindow(QWidget):
         if not c_name or not e_name: return
 
         master_students = []
-        if os.path.exists(f"classes/{c_name}.json"):
-            with open(f"classes/{c_name}.json", "r", encoding="utf-8") as f:
+        if os.path.exists(os.path.join(get_data_path("classes"), f"{c_name}.json")):
+            with open(os.path.join(get_data_path("classes"), f"{c_name}.json"), "r", encoding="utf-8") as f:
                 master_students = json.load(f).get("students", [])
 
         for s_obj in master_students:
             s_name = s_obj["name"]
-            log_path = f"logs/{e_name}_{s_name}.json"
+            log_path = os.path.join(get_data_path("logs"), f"{e_name}_{s_name}.json")
             log_data = None
             
             if os.path.exists(log_path):
@@ -671,9 +711,8 @@ class TeacherWindow(QWidget):
         header_row = QWidget()
         header_row.setStyleSheet("background-color: #F8DD70;")
         header_layout = QHBoxLayout(header_row)
-        back_btn = QPushButton("← Back")
+        back_btn = AnimatedBubbleButton("← Back", radius=8, animate=False)
         back_btn.setFixedSize(90, 34)
-        back_btn.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
         back_btn.clicked.connect(self.return_to_teacher_menu)
         header_layout.addWidget(back_btn)
         header_layout.addStretch()
@@ -688,39 +727,61 @@ class TeacherWindow(QWidget):
         header_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.addWidget(header_row)
         
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("<b>CREATE NEW CLASS</b>", alignment=Qt.AlignmentFlag.AlignCenter))
+        # Main content: Left (Form) + Right (Preview Table)
+        content_layout = QHBoxLayout()
         
+        # ===== LEFT SIDE: FORM =====
+        layout = QVBoxLayout()        
         layout.addWidget(QLabel("Class Name:"))
         self.new_class_name = QLineEdit()
+        self.new_class_name.setStyleSheet("background-color: #ffffff; border-radius: 4px; padding: 6px;")
         layout.addWidget(self.new_class_name)
 
         layout.addWidget(QLabel("Paste Student Names & Passwords (Name [TAB] Password):"))
         self.student_input_text = QTextEdit()
         self.student_input_text.setPlaceholderText("John Doe\tpass123\nJane Smith\tpass456")
+        self.student_input_text.setStyleSheet("background-color: #ffffff; border-radius: 4px; padding: 4px;")
+        self.student_input_text.textChanged.connect(self.update_student_preview_table)
         layout.addWidget(self.student_input_text)
 
-        save_btn = AnimatedBubbleButton("Save Class", color="#28a745", animate=False, radius=0)
+        save_btn = AnimatedBubbleButton("Save Class", color="#28a745", animate=False, radius=8)
+        save_btn.setMinimumHeight(42)
         save_btn.clicked.connect(self.save_new_class)
         layout.addWidget(save_btn)
 
-        outer_layout.addLayout(layout)
+        left_widget = QWidget()
+        left_widget.setLayout(layout)
+        content_layout.addWidget(left_widget, 1)
+        
+        # ===== RIGHT SIDE: PREVIEW TABLE =====
+        right_layout = QVBoxLayout()
+        right_layout.addWidget(QLabel("<b>Preview</b>", alignment=Qt.AlignmentFlag.AlignCenter))
+        
+        self.student_preview_table = QTableWidget()
+        self.student_preview_table.setColumnCount(2)
+        self.student_preview_table.setHorizontalHeaderLabels(["Username", "Password"])
+        self.student_preview_table.setStyleSheet("background-color: #ffffff; border-radius: 4px;")
+        self.student_preview_table.horizontalHeader().setStretchLastSection(True)
+        self.student_preview_table.setColumnWidth(0, 200)
+        right_layout.addWidget(self.student_preview_table)
+        
+        right_widget = QWidget()
+        right_widget.setLayout(right_layout)
+        content_layout.addWidget(right_widget, 1)
+        
+        outer_layout.addLayout(content_layout)
         self.stack.addWidget(page)
         self.stack.setCurrentWidget(page)
 
-    def save_new_class(self):
-        name = self.new_class_name.text().strip()
-        content = self.student_input_text.toPlainText().strip()
-        
-        if not name or not content:
-            QMessageBox.warning(self, "Error", "Fill in both Class Name and Student Data.")
-            return
-
+    def parse_student_input(self, content):
+        """Helper: Parse student input (tab-separated or vertical format)"""
         students = []
-        # 1. Split into a list and remove empty lines immediately
-        raw_lines = [line.strip() for line in content.splitlines() if line.strip()]
+        if not content:
+            return students
         
+        raw_lines = [line.strip() for line in content.splitlines() if line.strip()]
         i = 0
+        
         while i < len(raw_lines):
             line = raw_lines[i]
             
@@ -732,42 +793,63 @@ class TeacherWindow(QWidget):
                         "name": parts[0].strip(), 
                         "password": parts[1].strip()
                     })
-                i += 1  # Move to next line
+                i += 1
             
-            # CASE B: Vertical format (Your specific list)
-            # Line i is "adril", Line i+1 is "123"
+            # CASE B: Vertical format (name, then password)
             else:
                 if i + 1 < len(raw_lines):
-                    s_name = line
-                    s_pass = raw_lines[i+1]
                     students.append({
-                        "name": s_name, 
-                        "password": s_pass
+                        "name": line, 
+                        "password": raw_lines[i+1]
                     })
-                    i += 2  # Jump 2 lines (we used the name and the pass)
+                    i += 2
                 else:
-                    # Single name at the end with no password
                     i += 1
+        
+        return students
 
+    def update_student_preview_table(self):
+        """Parse student input and display in real-time preview table"""
+        content = self.student_input_text.toPlainText().strip()
+        students = self.parse_student_input(content)
+        
+        # Update table
+        self.student_preview_table.setRowCount(len(students))
+        for row, student in enumerate(students):
+            username_item = QTableWidgetItem(student.get("name", ""))
+            password_item = QTableWidgetItem(student.get("password", ""))
+            username_item.setFlags(username_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            password_item.setFlags(password_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.student_preview_table.setItem(row, 0, username_item)
+            self.student_preview_table.setItem(row, 1, password_item)
+
+    def save_new_class(self):
+        name = self.new_class_name.text().strip()
+        content = self.student_input_text.toPlainText().strip()
+        
+        if not name or not content:
+            QMessageBox.warning(self, "Error", "Fill in both Class Name and Student Data.")
+            return
+
+        students = self.parse_student_input(content)
+        
         if not students:
             QMessageBox.warning(self, "Error", "Could not detect Name/Password pairs.")
             return
 
-        # Matches your reference structure (classname, students list, exams list)
         data = {
             "classname": name, 
             "students": students, 
             "exams": []
         }
         
-        # Save to the classes folder
-        os.makedirs("classes", exist_ok=True)
-        filepath = f"classes/{name}.json"
+        os.makedirs(get_data_path("classes"), exist_ok=True)
+        filepath = os.path.join(get_data_path("classes"), f"{name}.json")
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
         
         QMessageBox.information(self, "Success", f"Class '{name}' created with {len(students)} students.")
-        self.close()
+        self.return_to_teacher_menu()
             
     # ===================== 6. MANAGE CLASS (FIXED) =====================
     def setup_manage_class(self):
@@ -781,9 +863,8 @@ class TeacherWindow(QWidget):
         header_row = QWidget()
         header_row.setStyleSheet("background-color: #F8DD70;")
         header_layout = QHBoxLayout(header_row)
-        back_btn = QPushButton("← Back")
+        back_btn = AnimatedBubbleButton("← Back", radius=8, animate=False)
         back_btn.setFixedSize(90, 34)
-        back_btn.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
         back_btn.clicked.connect(self.return_to_teacher_menu)
         header_layout.addWidget(back_btn)
         header_layout.addStretch()
@@ -804,6 +885,7 @@ class TeacherWindow(QWidget):
         top_row = QHBoxLayout()
         top_row.addWidget(QLabel("Select Class:"))
         self.class_picker = QComboBox()
+        self.class_picker.setStyleSheet("background-color: #ffffff; border-radius: 4px; padding: 2px;")
         self.refresh_class_list()
         self.class_picker.currentTextChanged.connect(self.load_selected_class_data)
         top_row.addWidget(self.class_picker, 1)
@@ -815,12 +897,16 @@ class TeacherWindow(QWidget):
         # Students List
         s_lay = QVBoxLayout(); s_lay.addWidget(QLabel("Students:"))
         self.manage_student_list = QListWidget()
+        self.manage_student_list.setStyleSheet("background-color: #ffffff; border-radius: 4px;")
         s_lay.addWidget(self.manage_student_list)
         lists_layout.addLayout(s_lay)
 
         # Exams List
         e_lay = QVBoxLayout(); e_lay.addWidget(QLabel("Assigned Exams:"))
         self.manage_exam_list = QListWidget()
+        self.manage_exam_list.setStyleSheet("background-color: #ffffff; border-radius: 4px;")
+        self.manage_exam_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.manage_exam_list.customContextMenuRequested.connect(self.show_exam_context_menu)
         e_lay.addWidget(self.manage_exam_list)
         lists_layout.addLayout(e_lay)
         
@@ -828,9 +914,12 @@ class TeacherWindow(QWidget):
 
         # Management Buttons
         btn_row = QHBoxLayout()
-        add_s_btn = AnimatedBubbleButton("Add Students", radius=0, animate=False); add_s_btn.clicked.connect(self.popup_add_students)
-        assign_e_btn = AnimatedBubbleButton("Assign Exam", radius=0, animate=False); assign_e_btn.clicked.connect(self.popup_assign_exam)
-        del_c_btn = AnimatedBubbleButton("Delete Class", color="#dc3545", radius=0, animate=False); del_c_btn.clicked.connect(self.delete_current_class)
+        add_s_btn = AnimatedBubbleButton("Add Students", radius=8, animate=False); add_s_btn.clicked.connect(self.popup_add_students)
+        add_s_btn.setMinimumHeight(42)
+        assign_e_btn = AnimatedBubbleButton("Assign Exam", radius=8, animate=False); assign_e_btn.clicked.connect(self.popup_assign_exam)
+        assign_e_btn.setMinimumHeight(42)
+        del_c_btn = AnimatedBubbleButton("Delete Class", color="#dc3545", radius=8, animate=False); del_c_btn.clicked.connect(self.delete_current_class)
+        del_c_btn.setMinimumHeight(42)
         
         btn_row.addWidget(add_s_btn); btn_row.addWidget(assign_e_btn); btn_row.addWidget(del_c_btn)
         layout.addLayout(btn_row)
@@ -842,13 +931,19 @@ class TeacherWindow(QWidget):
 
     def refresh_class_list(self):
         self.class_picker.clear()
-        classes = [f[:-5] for f in os.listdir("classes") if f.endswith(".json")]
-        if not classes: self.class_picker.addItem("No classes found")
-        else: self.class_picker.addItems(classes)
+        classes_dir = get_data_path("classes")
+        if not os.path.exists(classes_dir):
+            self.class_picker.addItem("No classes found")
+        else:
+            classes = [f[:-5] for f in os.listdir(classes_dir) if f.endswith(".json")]
+            if not classes:
+                self.class_picker.addItem("No classes found")
+            else:
+                self.class_picker.addItems(classes)
 
     def load_selected_class_data(self):
         c_name = self.class_picker.currentText()
-        path = f"classes/{c_name}.json"
+        path = os.path.join(get_data_path("classes"), f"{c_name}.json")
         self.manage_student_list.clear()
         self.manage_exam_list.clear()
         
@@ -867,11 +962,12 @@ class TeacherWindow(QWidget):
             
             # Updated placeholder to guide the user
             text = QTextEdit()
+            text.setStyleSheet("background-color: #ffffff; border-radius: 4px; padding: 4px;")
             text.setPlaceholderText("Paste from Excel (Side-by-Side) or Vertical List (Name line, Password line)")
             lay.addWidget(text)
             
             btn = QPushButton("Import")
-            btn.setStyleSheet(make_btn_style(NU_BLUE, "white"))
+            btn.setStyleSheet(make_btn_style(NU_BLUE, "white") + " border-radius: 8px;")
             lay.addWidget(btn)
             
             def process():
@@ -921,7 +1017,7 @@ class TeacherWindow(QWidget):
                 # Save back to the JSON file
                 class_name = self.class_picker.currentText()
                 try:
-                    with open(f"classes/{class_name}.json", "w", encoding="utf-8") as f:
+                    with open(os.path.join(get_data_path("classes"), f"{class_name}.json"), "w", encoding="utf-8") as f:
                         json.dump(self.current_class_data, f, indent=4, ensure_ascii=False)
                     
                     QMessageBox.information(dialog, "Success", f"Added {len(new_students)} students.")
@@ -934,20 +1030,20 @@ class TeacherWindow(QWidget):
             dialog.exec()
 
     def popup_assign_exam(self):
-        exams = [f[:-5] for f in os.listdir("exams") if f.endswith(".json")]
+        exams = [f[:-5] for f in os.listdir(get_data_path("exams")) if f.endswith(".json")]
         if not exams:
             QMessageBox.warning(self, "Error", "No exams found to assign.")
             return
             
         dialog = QDialog(self)
         dialog.setWindowTitle("Assign Exam")
-        lay = QVBoxLayout(dialog); listw = QListWidget(); listw.addItems(exams); lay.addWidget(listw)
+        lay = QVBoxLayout(dialog); listw = QListWidget(); listw.setStyleSheet("background-color: #ffffff; border-radius: 4px;"); listw.addItems(exams); lay.addWidget(listw)
         
         def assign():
             exam_name = listw.currentItem().text()
             if exam_name not in self.current_class_data.get("exams", []):
                 self.current_class_data.setdefault("exams", []).append(exam_name)
-                with open(f"classes/{self.class_picker.currentText()}.json", "w") as f:
+                with open(os.path.join(get_data_path("classes"), f"{self.class_picker.currentText()}.json"), "w") as f:
                     json.dump(self.current_class_data, f, indent=4)
                 self.load_selected_class_data()
             dialog.accept()
@@ -961,17 +1057,43 @@ class TeacherWindow(QWidget):
         
         ans = QMessageBox.question(self, "Confirm", f"Delete class '{c_name}'?")
         if ans == QMessageBox.StandardButton.Yes:
-            os.remove(f"classes/{c_name}.json")
+            os.remove(os.path.join(get_data_path("classes"), f"{c_name}.json"))
             self.refresh_class_list()
             self.load_selected_class_data()
 
+    def show_exam_context_menu(self, position):
+        """Display right-click context menu for exam list"""
+        item = self.manage_exam_list.itemAt(position)
+        if not item:
+            return
+        
+        context_menu = QMenu(self)
+        context_menu.setStyleSheet("QMenu { color: #000000; background-color: #ffffff; border: 1px solid #cccccc; } QMenu::item { color: #000000; } QMenu::item:selected { background-color: #e8f5e9; }")
+        unassign_action = context_menu.addAction("Unassign Exam")
+        unassign_action.triggered.connect(lambda: self.unassign_exam(item.text()))
+        
+        context_menu.exec(self.manage_exam_list.mapToGlobal(position))
+
+    def unassign_exam(self, exam_name):
+        """Remove an exam from the class"""
+        if exam_name in self.current_class_data.get("exams", []):
+            self.current_class_data["exams"].remove(exam_name)
+            
+            try:
+                class_name = self.class_picker.currentText()
+                if class_name != "No classes found":
+                    with open(os.path.join(get_data_path("classes"), f"{class_name}.json"), "w", encoding="utf-8") as f:
+                        json.dump(self.current_class_data, f, indent=4, ensure_ascii=False)
+                    
+                    QMessageBox.information(self, "Success", f"Exam '{exam_name}' unassigned successfully!")
+                    self.load_selected_class_data()
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to unassign exam: {str(e)}")
+
     def return_to_teacher_menu(self):
         """Return to main portal and show the teacher menu page"""
-        self.hide()
         try:
-            self.portal.t_win = None
             self.portal.show_teacher_page()
-            self.portal.show()
         except Exception:
             try:
                 self.portal.show()

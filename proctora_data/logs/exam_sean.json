@@ -1,0 +1,167 @@
+{
+    "type": "SUBMIT_LOG",
+    "exam_name": "exam",
+    "student_name": "sean",
+    "classname": "beta",
+    "score": 0,
+    "detections": [
+        {
+            "timestamp_relative_sec": 3,
+            "event": "Window focus lost (Alt+Tab / Tab Switched)"
+        },
+        {
+            "timestamp_relative_sec": 7,
+            "event": "Window focus lost (Alt+Tab / Tab Switched)"
+        },
+        {
+            "timestamp_relative_sec": 8,
+            "event": "Window focus lost (Alt+Tab / Tab Switched)"
+        },
+        {
+            "timestamp_relative_sec": 9,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 9,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 9,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 9,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 9,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 9,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 9,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 9,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 9,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 10,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 11,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 11,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 11,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 11,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 11,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 11,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 11,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 11,
+            "event": "Copy action detected"
+        },
+        {
+            "timestamp_relative_sec": 11,
+            "event": "Copy action detected"
+        }
+    ],
+    "duration_taken_sec": 13.189414,
+    "finished_at": "2026-02-10 18:03:13"
+}

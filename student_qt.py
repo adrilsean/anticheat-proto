@@ -6,13 +6,14 @@ from PyQt6.QtGui import QFont, QBrush, QColor
 
 # Import the shared networking module
 import network_logic
+from teacher_qt import AnimatedBubbleButton
 
 # Button style helper to match teacher UI
 BUTTON_RADIUS = 8
 BUTTON_PADDING = "6px 12px"
 BUTTON_FONT_SIZE = 14
 def make_btn_style(bg_color, text_color="white"):
-    return f"background-color: {bg_color}; color: {text_color}; border-radius: {BUTTON_RADIUS}px; padding: {BUTTON_PADDING}; font-size: {BUTTON_FONT_SIZE}px; font-weight: bold; border: none;"
+    return f"background-color: {bg_color}; color: {text_color}; border-radius: {BUTTON_RADIUS}px; padding: {BUTTON_PADDING}; font-size: {BUTTON_FONT_SIZE}px; font-weight: bold; border: none; font-family: Poppins;"
 
 class StudentWindow(QWidget):
     def __init__(self, name, teacher_ip, portal, classname):
@@ -100,12 +101,13 @@ class StudentWindow(QWidget):
         
         self.detection_display = QTextEdit()
         self.detection_display.setReadOnly(True)
-        self.detection_display.setFont(QFont("Courier", 9))
+        self.detection_display.setFont(QFont("Poppins", 9))
         self.detection_display.setStyleSheet("""
             QTextEdit {
                 background-color: #ffffff; 
                 color: #d32f2f;
-                border: 1px solid #cccccc;
+                border: none;
+                border-radius: 4px;
                 padding: 5px;
             }
         """)
@@ -125,9 +127,8 @@ class StudentWindow(QWidget):
         top_row = QWidget()
         top_row.setStyleSheet("background-color: #F8DD70;")
         top_layout = QHBoxLayout(top_row)
-        back_btn = QPushButton("← Home")
+        back_btn = AnimatedBubbleButton("← Home", radius=8, animate=False)
         back_btn.setFixedSize(90, 34)
-        back_btn.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
         back_btn.clicked.connect(self.return_to_portal)
 
         # Layout: back button | stretch | centered header | stretch | placeholder
@@ -150,7 +151,7 @@ class StudentWindow(QWidget):
 
         # Display the class assigned by the teacher
         class_info = QLabel(f"Current Class: <b>{self.student_class}</b>")
-        class_info.setStyleSheet("font-size: 14px; color: #0B2C5D; background-color: #F8DD70;")
+        class_info.setStyleSheet("font-size: 14px; color: #0B2C5D; background-color: #ffffff; border-radius: 4px; padding: 8px;")
         lay.addWidget(class_info)
 
         exams_label = QLabel("Assigned Exams (Double-click to start):")
@@ -166,6 +167,9 @@ class StudentWindow(QWidget):
                 background-color: #ffffff;
                 alternate-background-color: #f9f9f9;
                 gridline-color: #e0e0e0;
+                border: none;
+                border-radius: 4px;
+            }
             }
             QHeaderView::section {
                 background-color: #e8e8e8;
@@ -183,7 +187,7 @@ class StudentWindow(QWidget):
 
         start_btn = QPushButton("START SELECTED EXAM")
         start_btn.setFixedHeight(50)
-        start_btn.setStyleSheet(make_btn_style("#0B2C5D", "white") + " font-size: 14px;")
+        start_btn.setStyleSheet(make_btn_style("#0B2C5D", "white") + " font-size: 14px; border-radius: 8px;")
         start_btn.clicked.connect(self.check_and_load_exam)
         lay.addWidget(start_btn)
 
@@ -249,9 +253,8 @@ class StudentWindow(QWidget):
         header_row = QWidget()
         header_row.setStyleSheet("background-color: #F8DD70;")
         header_layout = QHBoxLayout(header_row)
-        back_btn = QPushButton("← Back")
+        back_btn = AnimatedBubbleButton("← Back", radius=8, animate=False)
         back_btn.setFixedSize(90, 34)
-        back_btn.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
         back_btn.clicked.connect(self.init_dashboard_view)
         
         header_layout.addWidget(back_btn)
@@ -324,7 +327,7 @@ class StudentWindow(QWidget):
         
         start_btn = QPushButton("BEGIN EXAM")
         start_btn.setFixedSize(240, 60)
-        start_btn.setStyleSheet(make_btn_style("#0B2C5D", "white") + "font-size: 16px;")
+        start_btn.setStyleSheet(make_btn_style("#0B2C5D", "white") + "font-size: 16px; border-radius: 8px;")
         start_btn.clicked.connect(self.start_exam)
         btn_layout.addWidget(start_btn)
         
@@ -364,9 +367,8 @@ class StudentWindow(QWidget):
         header_row = QWidget()
         header_row.setStyleSheet("background-color: #F8DD70;")
         header_layout = QHBoxLayout(header_row)
-        back_btn = QPushButton("← Back")
+        back_btn = AnimatedBubbleButton("← Back", radius=8, animate=False)
         back_btn.setFixedSize(90, 34)
-        back_btn.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
         back_btn.clicked.connect(self.return_to_portal)
         header_layout.addWidget(back_btn)
         header_layout.addStretch()
@@ -401,7 +403,7 @@ class StudentWindow(QWidget):
             box.setStyleSheet("""
                 QWidget {
                     background-color: #fffbe6;
-                    border: 2px solid #0B2C5D;
+                    border: none;
                     border-radius: 6px;
                     padding: 10px;
                 }

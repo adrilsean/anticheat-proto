@@ -2,7 +2,7 @@ import sys
 import os
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QMessageBox, QWidget,QPushButton
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPixmap, QPalette, QColor
+from PyQt6.QtGui import QPixmap,  QFontDatabase, QIcon
 
 # Import the other windows
 import network_logic
@@ -11,16 +11,66 @@ import student_qt as student
 from teacher_qt import AnimatedBubbleButton, NU_BLUE
 
 
+def get_asset_path(filename):
+    """Get the correct path for bundled assets (works for both source and PyInstaller EXE)"""
+    if getattr(sys, 'frozen', False):
+        # Running as a PyInstaller bundle
+        base_path = sys._MEIPASS
+    else:
+        # Running from source
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, filename)
+
+
+def get_data_path(subfolder):
+    """Get the correct path for data folders (exams, logs, classes) in proctora_data directory"""
+    if getattr(sys, 'frozen', False):
+        # Running as a PyInstaller bundle - use current working directory
+        base_path = os.getcwd()
+    else:
+        # Running from source - use script directory
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, 'proctora_data', subfolder)
+
+
+def load_custom_fonts():
+    """Load Poppins fonts from the fonts directory"""
+    font_dir = get_asset_path('fonts')
+    loaded_fonts = []
+    
+    # Try to load Poppins fonts
+    poppins_fonts = [
+        'Poppins-Regular.ttf',
+        'Poppins-Medium.ttf', 
+        'Poppins-Bold.ttf'
+    ]
+    
+    for font_file in poppins_fonts:
+        font_path = os.path.join(font_dir, font_file)
+        if os.path.exists(font_path):
+            font_id = QFontDatabase.addApplicationFont(font_path)
+            if font_id != -1:
+                loaded_fonts.append(font_file)
+                print(f"Loaded font: {font_file}")
+            else:
+                print(f"Failed to load font: {font_file}")
+        else:
+            print(f"Font file not found: {font_file}")
+    
+    return loaded_fonts
+
+
 class AntiCheatPortal(QMainWindow):
     """1. MAIN PORTAL - Central login and navigation window"""
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PROCTORA: ANTI-CHEATING SYSTEM")
+        self.setWindowIcon(QIcon(get_asset_path("logo.png")))
         self.setFixedSize(900, 600)
 
-        # 1.1 CREATE FOLDERS - Initialize required directories
+        # 1.1 CREATE FOLDERS - Initialize required directories in proctora_data
         for folder in ["exams", "logs", "classes"]:
-            os.makedirs(folder, exist_ok=True)
+            os.makedirs(get_data_path(folder), exist_ok=True)
 
         # 1.2 BACKGROUND LABEL - Display background image
         self.bg_label = QLabel(self)
@@ -76,8 +126,30 @@ class AntiCheatPortal(QMainWindow):
             # Widget was likely deleted; ignore update
             pass
 
+    def stop_teacher_server(self):
+        """Stop the broadcaster and server threads"""
+        if getattr(self, 'broadcaster', None) is not None:
+            try:
+                self.broadcaster.stop()
+            except Exception:
+                pass
+            self.broadcaster = None
+        
+        if getattr(self, 'server_thread', None) is not None:
+            try:
+                self.server_thread.stop()
+            except Exception:
+                pass
+            self.server_thread = None
+        
+        self.server_started = False
+        self.active_teacher_ip = None
+
     def show_opening_page(self):
         """2. OPENING PAGE - Modernized UI with Logo and Coded Text"""
+        # Stop teacher server/broadcaster if running
+        self.stop_teacher_server()
+        
         self.clear_ui()
         # Instead of a heavy image, use a clean background or a simple logo
         self.bg_label.setPixmap(QPixmap()) # Clear background
@@ -85,7 +157,7 @@ class AntiCheatPortal(QMainWindow):
 
         # 2.1 ADD LOGO
         self.logo = QLabel(self)
-        self.logo.setPixmap(QPixmap("logo.png").scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        self.logo.setPixmap(QPixmap(get_asset_path("logo.png")).scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         self.logo.setGeometry(375, 80, 150, 150)
         self.logo.show()
 
@@ -112,19 +184,28 @@ class AntiCheatPortal(QMainWindow):
         self.btn_s = AnimatedBubbleButton("STUDENT PORTAL", self, radius=8, color="#ffffff", text_col="#0B2C5D")
         self.btn_s.setGeometry(300, 415, 300, 50)
         # Add a subtle border to the white button
-        self.btn_s.setStyleSheet(self.btn_s.styleSheet() + "border: 2px solid #0B2C5D;")
+        # self.btn_s border removed for cleaner appearance
         self.btn_s.clicked.connect(self.show_student_login)
         self.btn_s.show()
 
     def show_teacher_page(self):
         """3. TEACHER PAGE - Hook networking and display menu"""
+        # Explicitly clean up old teacher window
+        if hasattr(self, 't_win') and self.t_win is not None:
+            try:
+                self.t_win.hide()
+                self.t_win.deleteLater()
+            except Exception:
+                pass
+            self.t_win = None
+        
         self.clear_ui()
         self.bg_label.setPixmap(QPixmap())
         self.bg_label.setStyleSheet("background-color: #F8DD70;")
 
         if not self.server_started:
             # Start the Lighthouse (UDP) and the Server (TCP)
-            classes = [f[:-5] for f in os.listdir("classes") if f.endswith(".json")]
+            classes = [f[:-5] for f in os.listdir(get_data_path("classes")) if f.endswith(".json")]
             self.broadcaster = network_logic.TeacherBroadcaster(classes)
             self.broadcaster.start()
 
@@ -132,25 +213,25 @@ class AntiCheatPortal(QMainWindow):
             self.server_thread.start()
             self.server_started = True
 
-        # 3.0 ADD LOGO
+        # 3.0 ADD LOGO - Centered horizontally
         self.logo_teacher = QLabel(self)
-        self.logo_teacher.setPixmap(QPixmap("logo.png").scaled(120, 120, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        self.logo_teacher.setGeometry(390, 10, 120, 120)
+        self.logo_teacher.setPixmap(QPixmap(get_asset_path("logo.png")).scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        self.logo_teacher.setGeometry(400, 20, 100, 100)
         self.logo_teacher.show()
 
-        # 3.0B ADD TITLE
+        # 3.0B ADD TITLE - Consistent with student login
         self.teacher_title = QLabel("TEACHER PORTAL", self)
-        self.teacher_title.setGeometry(0, 135, 900, 45)
+        self.teacher_title.setGeometry(0, 130, 900, 45)
         self.teacher_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.teacher_title.setStyleSheet("font-size: 28px; font-weight: bold; color: #0B2C5D;")
         self.teacher_title.show()
 
         # 3.1 MENU OPTIONS (Existing code continues)
         options = [
-            ("GENERATE EXAM", 200, "exam"),
-            ("VIEW EXAM LOGS", 270, "logs"),
-            ("CREATE NEW CLASS", 340, "create_class"),
-            ("MANAGE CLASSES", 410, "manage_class")
+            ("GENERATE EXAM", 195, "exam"),
+            ("VIEW EXAM LOGS", 265, "logs"),
+            ("CREATE NEW CLASS", 335, "create_class"),
+            ("MANAGE CLASSES", 405, "manage_class")
         ]
 
         for text, y, key in options:
@@ -159,9 +240,8 @@ class AntiCheatPortal(QMainWindow):
             btn.clicked.connect(lambda ch, k=key: self.launch_teacher(k))
             btn.show()
 
-        back = QPushButton("← Back", self)
+        back = AnimatedBubbleButton("← Back", self, radius=8, animate=False)
         back.setGeometry(20, 20, 90, 34)
-        back.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
         back.clicked.connect(self.show_opening_page)
         back.show()
 
@@ -179,22 +259,22 @@ class AntiCheatPortal(QMainWindow):
         self.clear_ui()
         self.bg_label.setStyleSheet("background-color: #F8DD70;")
 
-        # 4.1 LOGO (Smaller for Login Page)
+        # 4.1 LOGO - Consistent size and positioning with teacher page
         self.logo_sm = QLabel(self)
-        self.logo_sm.setPixmap(QPixmap("logo.png").scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        self.logo_sm.setGeometry(410, 50, 80, 80)
+        self.logo_sm.setPixmap(QPixmap(get_asset_path("logo.png")).scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        self.logo_sm.setGeometry(400, 20, 100, 100)
         self.logo_sm.show()
 
-        # 4.2 HEADER
+        # 4.2 HEADER - Consistent positioning with teacher portal
         self.login_header = QLabel("STUDENT SIGN-IN", self)
-        self.login_header.setGeometry(0, 140, 900, 40)
+        self.login_header.setGeometry(0, 130, 900, 45)
         self.login_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.login_header.setStyleSheet("font-size: 24px; font-weight: bold; color: #0B2C5D;")
+        self.login_header.setStyleSheet("font-size: 28px; font-weight: bold; color: #0B2C5D;")
         self.login_header.show()
 
         # 4.3 STATUS INDICATOR (Live)
         self.status_label = QLabel(self)
-        self.status_label.setGeometry(300, 185, 300, 30)
+        self.status_label.setGeometry(300, 180, 300, 30)
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         # Show connected status if a teacher was discovered, otherwise show offline message
         if self.active_teacher_ip:
@@ -207,25 +287,26 @@ class AntiCheatPortal(QMainWindow):
         # 4.4 INPUTS
         self.name_entry = QLineEdit(self)
         self.name_entry.setPlaceholderText("Full Name")
-        self.name_entry.setGeometry(300, 250, 300, 45)
+        self.name_entry.setGeometry(300, 245, 300, 45)
+        self.name_entry.setStyleSheet("background-color: #ffffff; border-radius: 4px; padding: 6px;")
         self.name_entry.show()
 
         self.pass_entry = QLineEdit(self)
         self.pass_entry.setPlaceholderText("Access Password")
         self.pass_entry.setEchoMode(QLineEdit.EchoMode.Password)
-        self.pass_entry.setGeometry(300, 310, 300, 45)
+        self.pass_entry.setGeometry(300, 305, 300, 45)
+        self.pass_entry.setStyleSheet("background-color: #ffffff;")
         self.pass_entry.returnPressed.connect(self.launch_student)
         self.pass_entry.show()
 
         # 4.5 BUTTONS
         login = AnimatedBubbleButton("SIGN IN", self, radius=8)
-        login.setGeometry(300, 380, 300, 50)
+        login.setGeometry(300, 375, 300, 50)
         login.clicked.connect(self.launch_student)
         login.show()
 
-        back = QPushButton("← Back", self)
+        back = AnimatedBubbleButton("← Back", self, radius=8, animate=False)
         back.setGeometry(20, 20, 90, 34)
-        back.setStyleSheet("background-color: #0B2C5D; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 12px;")
         back.clicked.connect(self.show_opening_page)
         back.show()
     def launch_teacher(self, page):
@@ -288,34 +369,41 @@ if __name__ == "__main__":
     # 7. MAIN LOOP - Initialize and run application
     app = QApplication(sys.argv)
     
+    # Load custom fonts
+    loaded_fonts = load_custom_fonts()
+    
     # Light Mode Stylesheet
     app.setStyle('Fusion')
     light_stylesheet = """
     QMainWindow, QWidget, QDialog {
         background-color: #f5f5f5;
         color: #FFD700 ;
+        font-family: Poppins;
     }
     QLabel {
         background-color: transparent;
         color: #000000;
+        font-family: Poppins;
     }
     QLineEdit, QTextEdit, QPlainTextEdit {
         background-color: #ffffff;
         color: #000000;
-        border: 1px solid #cccccc;
+        border: none;
         border-radius: 4px;
         padding: 4px;
+        font-family: Poppins;
     }
     QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
-        border: 2px solid #0B2C5D;
+        border: none;
     }
     QPushButton {
         background-color: #0B2C5D;
         color: #ffffff;
         border: none;
-        border-radius: 4px;
+        border-radius: 8px;
         padding: 4px 8px;
         font-weight: bold;
+        font-family: Poppins;
     }
     QPushButton:hover {
         background-color: #154c9e;
@@ -329,6 +417,7 @@ if __name__ == "__main__":
         border: 1px solid #cccccc;
         border-radius: 4px;
         padding: 2px;
+        font-family: Poppins;
     }
     QComboBox:hover {
         border: 1px solid #0B2C5D;
@@ -338,6 +427,7 @@ if __name__ == "__main__":
         background-color: transparent;
         spacing: 5px;
         padding: 1px;
+        font-family: Poppins;
     }
     QCheckBox::indicator, QRadioButton::indicator {
         width: 13px;
@@ -368,6 +458,7 @@ if __name__ == "__main__":
         border: 1px solid #cccccc;
         border-radius: 4px;
         padding: 2px;
+        font-family: Poppins;
     }
     QGroupBox {
         color: #000000;
@@ -375,6 +466,7 @@ if __name__ == "__main__":
         border-radius: 4px;
         margin-top: 8px;
         padding-top: 8px;
+        font-family: Poppins;
     }
     QGroupBox::title {
         subcontrol-origin: margin;
@@ -386,6 +478,7 @@ if __name__ == "__main__":
         color: #000000;
         border: 1px solid #cccccc;
         gridline-color: #e0e0e0;
+        font-family: Poppins;
     }
     QHeaderView::section {
         background-color: #e8e8e8;

@@ -1,0 +1,10 @@
+{
+    "type": "SUBMIT_LOG",
+    "exam_name": "exam",
+    "student_name": "adr",
+    "classname": "beta",
+    "score": 1,
+    "detections": [],
+    "duration_taken_sec": 2.160901,
+    "finished_at": "2026-02-10 12:32:25"
+}
